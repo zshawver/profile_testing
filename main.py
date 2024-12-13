@@ -15,9 +15,12 @@ dv: str = "Lean" #Name of verdict DV
 pl_label = 1 #Label for Plaintiff jurors in DV
 def_label = 0 #Label for Defense jurors in DV
 
+chisq_fn: str = "Gerber_main_effects"+".xlsx" #Filename for chi-square output file
+chisq_sheetName: str = "Main Effect - Labels"
+
 #%%Import data files
 data_df = pd.read_excel(os.path.join(script_dir,"Data", data_fn), sheet_name = data_sheetName)
 
 jurors, pl_jurors, def_jurors = prepare_juror_lists(data_df, dv, juror_varName, pl_label, def_label)
 
-jurors['j1'].Lean
+chisq_df = pd.read_excel(os.path.join(script_dir,"Data", chisq_fn), sheet_name = chisq_sheetName)
