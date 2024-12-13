@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Dec 13 09:18:45 2024
-
-@author: zshawver
-"""
 
 import pandas as pd
 from juror import Juror
 
-def prepare_juror_lists(df: pd.DataFrame,dv: str,juror_name: str,plaintiff_label: str,defense_label: str) -> dict:
+def prepare_juror_lists(df: pd.DataFrame, dv: str, juror_name: str, plaintiff_label: str, defense_label: str) -> dict:
 
     #Empty dictionary to hold jurors' information
     jurors = {}
