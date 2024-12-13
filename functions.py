@@ -2,7 +2,7 @@
 import pandas as pd
 from juror import Juror
 
-def prepare_juror_lists(df: pd.DataFrame, dv: str, juror_name: str, plaintiff_label: str, defense_label: str) -> dict:
+def prepare_juror_lists(df: pd.DataFrame, dv, juror_name: str, plaintiff_label, defense_label) -> dict:
 
     #Empty dictionary to hold jurors' information
     jurors = {}
