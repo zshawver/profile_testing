@@ -24,3 +24,11 @@ data_df = pd.read_excel(os.path.join(script_dir,"Data", data_fn), sheet_name = d
 jurors, pl_jurors, def_jurors = prepare_juror_lists(data_df, dv, juror_varName, pl_label, def_label)
 
 chisq_df = pd.read_excel(os.path.join(script_dir,"Data", chisq_fn), sheet_name = chisq_sheetName)
+
+chisq_df.iloc[1]
+
+dietJurors = [juror for jNum, juror in jurors.items() if getattr(juror,'DIET_OR_LIFESTYLES') == 1 ]
+
+for i, row in chisq_df.iterrows():
+    jurors_by_iv = [juror.Lean for jNum,juror in jurors.items() if getattr(juror, row['iv']) == row['iv_level']]
+    print(jurors_by_iv)
