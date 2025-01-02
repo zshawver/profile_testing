@@ -50,19 +50,19 @@ def create_weights(chisq_df):
     })
 
     # 1. Logarithmic Weighting
-    chisq_df["log_weight"] = np.log(chisq_df["N"] + 1)
+    chisq_df["log_weight"] = 1 - (1 / np.log(chisq_df["N"] + 1))
 
     # 2. Quadratic Weighting
-    chisq_df["quadratic_weight"] = np.sqrt(chisq_df["N"])
+    chisq_df["quadratic_weight"] = 1 - (1 / np.sqrt(chisq_df["N"]))
 
     # 3a. Split Difference Weighting
     chisq_df["split_difference"] = abs(chisq_df["dv_1"] - chisq_df["dv_0"])
 
     # 3b. Split Difference Weighting - Log Scaling
-    chisq_df["split_weight_log"] = np.log(chisq_df["split_difference"] + 1) / chisq_df["N"]
+    chisq_df["split_weight_log"] = chisq_df["split_difference"] / chisq_df["N"]
 
     # 3c. Split Difference Weighting - Quadratic Scaling
-    chisq_df["split_weight_quadratic"] = (chisq_df["split_difference"] ** 2) / chisq_df["N"]
+    chisq_df["split_weight_quadratic"] = chisq_df["split_difference"] / np.sqrt(chisq_df["N"])
 
     # 4. Bayesian Shrinkage
     overall_decision_rate = 0.6
@@ -103,22 +103,12 @@ def create_weights(chisq_df):
         ) / (chisq_df[scheme].max() - chisq_df[scheme].min())
 
     # Apply weights to Plaintiff Percentage to make predictions
-    chisq_df["predicted_plaintiff_percentage"] = (
-        chisq_df["pct_1"] * chisq_df["log_weight_adjusted"]
-        + chisq_df["pct_1"] * chisq_df["quadratic_weight_adjusted"]
-        + chisq_df["pct_1"] * chisq_df["split_weight_log_adjusted"]
-        + chisq_df["pct_1"] * chisq_df["split_weight_quadratic_adjusted"]
-        + chisq_df["pct_1"] * chisq_df["bayesian_weight_adjusted"]
-        + chisq_df["pct_1"] * chisq_df["entropy_weight_adjusted"]
-        + chisq_df["pct_1"] * chisq_df["hybrid_weight_adjusted"]
-    )
-
-    # Normalize final prediction to 0-1 range
-    chisq_df["predicted_plaintiff_percentage_normalized"] = (
-        chisq_df["predicted_plaintiff_percentage"] - chisq_df["predicted_plaintiff_percentage"].min()
-    ) / (chisq_df["predicted_plaintiff_percentage"].max() - chisq_df["predicted_plaintiff_percentage"].min())
+    for scheme in weighting_schemes:
+        prediction_column = f"{scheme}_prediction"
+        chisq_df[prediction_column] = chisq_df[scheme] * chisq_df["pct_1"]
 
     return chisq_df
+
 
 # Function to create a tuple excluding NaN values
 def create_nested_tuples(row):
