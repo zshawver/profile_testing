@@ -30,11 +30,20 @@ def calculate_entropy(row):
     )
     return entropy
 
-def create_weights(chisq_df):
-    # Categorize results into sides
-    chisq_df["side"] = np.where(
-        chisq_df["pct_1"] > chisq_df["pct_0"], "Pro-Plaintiff",
-        np.where(chisq_df["pct_1"] < chisq_df["pct_0"], "Pro-Defense", "Neutral")
+def create_weights(chisq_df, baseline_plf_pct):
+    # 1. Add baseline plaintiff percentage and the difference from the baseline
+    chisq_df["baseline_plf"] = baseline_plf_pct
+    chisq_df["baseline_difference"] = chisq_df["pct_1"] - chisq_df["baseline_plf"]
+
+    # 2. Classify based on the absolute value of the baseline difference
+    chisq_df["classification"] = chisq_df["baseline_difference"].apply(
+        lambda x: "Baseline" if abs(x) <= 3 else
+                  "Slightly Pro-Plaintiff" if 3 < abs(x) <= 8 and x > 0 else
+                  "Slightly Pro-Defense" if 3 < abs(x) <= 8 and x < 0 else
+                  "Moderately Pro-Plaintiff" if 8 < abs(x) <= 15 and x > 0 else
+                  "Moderately Pro-Defense" if 8 < abs(x) <= 15 and x < 0 else
+                  "Strongly Pro-Plaintiff" if x > 15 else
+                  "Strongly Pro-Defense" if x < -15 else "Unknown"
     )
 
     # Calculate total counts for each side
