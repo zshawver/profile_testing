@@ -21,8 +21,8 @@ def calculate_entropy(row):
     total = row["N"]
     if total == 0:
         return 0
-    p_plaintiff = row["n_plaintiff"] / total
-    p_defense = row["n_defense"] / total
+    p_plaintiff = row["dv_1"] / total
+    p_defense = row["dv_0"] / total
     if p_plaintiff == 0 or p_defense == 0:  # Avoid log(0)
         return 0
     entropy = -(
@@ -30,11 +30,11 @@ def calculate_entropy(row):
     )
     return entropy
 
-def create_weights(chisq_df, pro_plaintiff_threshold, pro_defense_threshold):
+def create_weights(chisq_df):
     # Categorize results into sides
     chisq_df["side"] = np.where(
-        chisq_df["percent_plaintiff"] > pro_plaintiff_threshold, "Pro-Plaintiff",
-        np.where(chisq_df["percent_plaintiff"] < pro_defense_threshold, "Pro-Defense", "Neutral")
+        chisq_df["pct_1"] > chisq_df["pct_0"], "Pro-Plaintiff",
+        np.where(chisq_df["pct_1"] < chisq_df["pct_0"], "Pro-Defense", "Neutral")
     )
 
     # Calculate total counts for each side
@@ -52,19 +52,18 @@ def create_weights(chisq_df, pro_plaintiff_threshold, pro_defense_threshold):
     # 1. Logarithmic Weighting
     chisq_df["log_weight"] = np.log(chisq_df["N"] + 1)
 
-    # 2. Split Difference Scaling
-    chisq_df["split_difference"] = abs(chisq_df["n_plaintiff"] - chisq_df["n_defense"])
+    # 2. Quadratic Weighting
+    chisq_df["quadratic_weight"] = np.sqrt(chisq_df["N"])
+
+    # 3. Split Difference Scaling
+    chisq_df["split_difference"] = abs(chisq_df["dv_1"] - chisq_df["dv_0"])
     chisq_df["split_weight"] = chisq_df["split_difference"] / chisq_df["N"]
 
-    # 3. Bayesian Shrinkage
-    # Assuming an overall baseline decision rate
+    # 4. Bayesian Shrinkage
     overall_decision_rate = 0.6
     chisq_df["bayesian_weight"] = (
-        chisq_df["N"] * chisq_df["percent_plaintiff"] + overall_decision_rate * 100
+        chisq_df["N"] * chisq_df["pct_1"] + overall_decision_rate * 100
     ) / (chisq_df["N"] + 1)
-
-    # 4. Quadratic Weighting
-    chisq_df["quadratic_weight"] = np.sqrt(chisq_df["N"])
 
     # 5. Entropy-Based Weighting
     chisq_df["entropy"] = chisq_df.apply(calculate_entropy, axis=1)
@@ -77,21 +76,27 @@ def create_weights(chisq_df, pro_plaintiff_threshold, pro_defense_threshold):
         * chisq_df["entropy_weight"]
     )
 
-    # Apply side-based normalization to all weights
+    # Create scaling adjustments separately for each method
+    chisq_df["log_weight_adjusted"] = chisq_df["log_weight"] * chisq_df["side_weight"]
+    chisq_df["quadratic_weight_adjusted"] = chisq_df["quadratic_weight"] * chisq_df["side_weight"]
+    chisq_df["split_weight_adjusted"] = chisq_df["split_weight"] * chisq_df["side_weight"]
+    chisq_df["bayesian_weight_adjusted"] = chisq_df["bayesian_weight"] * chisq_df["side_weight"]
+    chisq_df["entropy_weight_adjusted"] = chisq_df["entropy_weight"] * chisq_df["side_weight"]
+    chisq_df["hybrid_weight_adjusted"] = chisq_df["hybrid_weight"] * chisq_df["side_weight"]
+
+    # Optional: Normalize adjusted weights to [0, 1] for comparison
     weighting_schemes = [
-        "log_weight", "split_weight", "bayesian_weight",
-        "quadratic_weight", "entropy_weight", "hybrid_weight"
+        "log_weight_adjusted", "quadratic_weight_adjusted", "split_weight_adjusted",
+        "bayesian_weight_adjusted", "entropy_weight_adjusted", "hybrid_weight_adjusted"
     ]
 
     for scheme in weighting_schemes:
-        chisq_df[f"adjusted_{scheme}"] = chisq_df[scheme] * chisq_df["side_weight"]
+        adjusted_column = f"normalized_{scheme}"
+        chisq_df[adjusted_column] = (
+            chisq_df[scheme] - chisq_df[scheme].min()
+        ) / (chisq_df[scheme].max() - chisq_df[scheme].min())
 
-    # Optional: Normalize adjusted weights to [0, 1] for comparison
-    for scheme in weighting_schemes:
-        adjusted_column = f"adjusted_{scheme}"
-        chisq_df[f"normalized_{adjusted_column}"] = (
-            chisq_df[adjusted_column] - chisq_df[adjusted_column].min()
-        ) / (chisq_df[adjusted_column].max() - chisq_df[adjusted_column].min())
+    return chisq_df
 
 # Function to create a tuple excluding NaN values
 def create_nested_tuples(row):
