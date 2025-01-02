@@ -4,7 +4,8 @@ import os
 # Add the directory of the current script to the Python path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(script_dir)
-from functions import prepare_juror_lists
+from functions import prepare_juror_lists, create_weights
+import weights
 import pandas as pd
 
 #%%Specify key variables
@@ -32,3 +33,10 @@ dietJurors = [juror for jNum, juror in jurors.items() if getattr(juror,'DIET_OR_
 for i, row in chisq_df.iterrows():
     jurors_by_iv = [juror.Lean for jNum,juror in jurors.items() if getattr(juror, row['iv']) == row['iv_level']]
     print(jurors_by_iv)
+
+#%%
+# Define thresholds for Pro-Plaintiff and Pro-Defense
+pro_plaintiff_threshold = .7  # Percentage threshold for Pro-Plaintiff
+pro_defense_threshold = .2    # Percentage threshold for Pro-Defense
+
+create_weights(chisq_df, pro_plaintiff_threshold, pro_defense_threshold)
