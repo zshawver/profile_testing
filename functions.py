@@ -55,9 +55,14 @@ def create_weights(chisq_df):
     # 2. Quadratic Weighting
     chisq_df["quadratic_weight"] = np.sqrt(chisq_df["N"])
 
-    # 3. Split Difference Scaling
+    # 3a. Split Difference Weighting
     chisq_df["split_difference"] = abs(chisq_df["dv_1"] - chisq_df["dv_0"])
-    chisq_df["split_weight"] = chisq_df["split_difference"] / chisq_df["N"]
+
+    # 3b. Split Difference Weighting - Log Scaling
+    chisq_df["split_weight_log"] = np.log(chisq_df["split_difference"] + 1) / chisq_df["N"]
+
+    # 3c. Split Difference Weighting - Quadratic Scaling
+    chisq_df["split_weight_quadratic"] = (chisq_df["split_difference"] ** 2) / chisq_df["N"]
 
     # 4. Bayesian Shrinkage
     overall_decision_rate = 0.6
@@ -72,22 +77,23 @@ def create_weights(chisq_df):
     # 6. Hybrid Approach
     chisq_df["hybrid_weight"] = (
         chisq_df["log_weight"]
-        * chisq_df["split_weight"]
+        * chisq_df["split_weight_log"]
         * chisq_df["entropy_weight"]
     )
 
     # Create scaling adjustments separately for each method
     chisq_df["log_weight_adjusted"] = chisq_df["log_weight"] * chisq_df["side_weight"]
     chisq_df["quadratic_weight_adjusted"] = chisq_df["quadratic_weight"] * chisq_df["side_weight"]
-    chisq_df["split_weight_adjusted"] = chisq_df["split_weight"] * chisq_df["side_weight"]
+    chisq_df["split_weight_log_adjusted"] = chisq_df["split_weight_log"] * chisq_df["side_weight"]
+    chisq_df["split_weight_quadratic_adjusted"] = chisq_df["split_weight_quadratic"] * chisq_df["side_weight"]
     chisq_df["bayesian_weight_adjusted"] = chisq_df["bayesian_weight"] * chisq_df["side_weight"]
     chisq_df["entropy_weight_adjusted"] = chisq_df["entropy_weight"] * chisq_df["side_weight"]
     chisq_df["hybrid_weight_adjusted"] = chisq_df["hybrid_weight"] * chisq_df["side_weight"]
 
-    # Optional: Normalize adjusted weights to [0, 1] for comparison
+    # Normalize adjusted weights to [0, 1] for comparison
     weighting_schemes = [
-        "log_weight_adjusted", "quadratic_weight_adjusted", "split_weight_adjusted",
-        "bayesian_weight_adjusted", "entropy_weight_adjusted", "hybrid_weight_adjusted"
+        "log_weight_adjusted", "quadratic_weight_adjusted", "split_weight_log_adjusted",
+        "split_weight_quadratic_adjusted", "bayesian_weight_adjusted", "entropy_weight_adjusted", "hybrid_weight_adjusted"
     ]
 
     for scheme in weighting_schemes:
@@ -95,6 +101,22 @@ def create_weights(chisq_df):
         chisq_df[adjusted_column] = (
             chisq_df[scheme] - chisq_df[scheme].min()
         ) / (chisq_df[scheme].max() - chisq_df[scheme].min())
+
+    # Apply weights to Plaintiff Percentage to make predictions
+    chisq_df["predicted_plaintiff_percentage"] = (
+        chisq_df["pct_1"] * chisq_df["log_weight_adjusted"]
+        + chisq_df["pct_1"] * chisq_df["quadratic_weight_adjusted"]
+        + chisq_df["pct_1"] * chisq_df["split_weight_log_adjusted"]
+        + chisq_df["pct_1"] * chisq_df["split_weight_quadratic_adjusted"]
+        + chisq_df["pct_1"] * chisq_df["bayesian_weight_adjusted"]
+        + chisq_df["pct_1"] * chisq_df["entropy_weight_adjusted"]
+        + chisq_df["pct_1"] * chisq_df["hybrid_weight_adjusted"]
+    )
+
+    # Normalize final prediction to 0-1 range
+    chisq_df["predicted_plaintiff_percentage_normalized"] = (
+        chisq_df["predicted_plaintiff_percentage"] - chisq_df["predicted_plaintiff_percentage"].min()
+    ) / (chisq_df["predicted_plaintiff_percentage"].max() - chisq_df["predicted_plaintiff_percentage"].min())
 
     return chisq_df
 
