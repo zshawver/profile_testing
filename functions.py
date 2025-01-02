@@ -92,3 +92,14 @@ def create_weights(chisq_df, pro_plaintiff_threshold, pro_defense_threshold):
         chisq_df[f"normalized_{adjusted_column}"] = (
             chisq_df[adjusted_column] - chisq_df[adjusted_column].min()
         ) / (chisq_df[adjusted_column].max() - chisq_df[adjusted_column].min())
+
+# Function to create a tuple excluding NaN values
+def create_nested_tuples(row):
+    nested_tuples = []
+    for iv, level in zip(
+        [row['control_2'], row['control_1'], row['iv']],
+        [row['control_2_level'], row['control_1_level'], row['iv_level']]
+    ):
+        if pd.notna(iv) and pd.notna(level):  # Include only non-NaN pairs
+            nested_tuples.append((iv, level))
+    return tuple(nested_tuples)
