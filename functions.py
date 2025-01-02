@@ -46,15 +46,40 @@ def create_weights(chisq_df, baseline_plf_pct):
                   "Strongly Pro-Defense" if x < -15 else "Unknown"
     )
 
-    # Calculate total counts for each side
+    # 3. Collapse classifications into general sides while leaving baseline and unknown intact
+    def collapse_side(classification):
+        if "Plaintiff" in classification:
+            return "Plaintiff"
+        elif "Defense" in classification:
+            return "Defense"
+        else:
+            return classification  # Keep "Baseline" and "Unknown" intact
+
+    chisq_df["side_collapsed"] = chisq_df["classification"].apply(collapse_side)
+
+    # 4. Calculate total counts for each side (collapsed)
     side_counts = chisq_df["side"].value_counts()
-    total_pro_plaintiff = side_counts.get("Pro-Plaintiff", 0)
-    total_pro_defense = side_counts.get("Pro-Defense", 0)
+    total_plaintiff = side_counts.get("Plaintiff", 0)
+    total_defense = side_counts.get("Defense", 0)
+
+    # 5. Count baseline results
+    baseline_count = chisq_df[chisq_df["classification"] == "Baseline"].shape[0]
+
+    # 6. Check for any "Unknown" classifications and print relevant information
+    unknown_count = chisq_df["classification"].value_counts().get("Unknown", 0)
+    if unknown_count > 0:
+        print("Warning: There are 'Unknown' classifications.")
+        print(f"Unknown classification count: {unknown_count}")
+        print("Rows with 'Unknown' classification:")
+        print(chisq_df[chisq_df["classification"] == "Unknown"])
+        print("Examine why these classifications occurred, possibly due to missing or unanticipated data.")
+        return chisq_df  # Break the function here to prevent further processing if "Unknown" exists
+
 
     # Add normalization factor for Pro-Plaintiff and Pro-Defense
     chisq_df["side_weight"] = chisq_df["side"].map({
-        "Pro-Plaintiff": 1 / total_pro_plaintiff if total_pro_plaintiff > 0 else 0,
-        "Pro-Defense": 1 / total_pro_defense if total_pro_defense > 0 else 0,
+        "Pro-Plaintiff": 1 / total_plaintiff if total_plaintiff > 0 else 0,
+        "Pro-Defense": 1 / total_defense if total_defense > 0 else 0,
         "Neutral": 0  # Neutral cases are not weighted
     })
 
