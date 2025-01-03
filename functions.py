@@ -71,7 +71,7 @@ def create_weights(chisq_df, baseline_plf):
         prediction_col = f"{col}_prediction"
         chisq_df[prediction_col] = chisq_df[col] * chisq_df["pct_1"]
 
-    drop_columns = [col for col in chisq_df if "_prediction" not in col and col != "iv_level_tuples"]
+    drop_columns = [col for col in chisq_df if "_prediction" not in col and col != "iv_level_tuples" and col != "pct_1"]
 
     chisq_df = chisq_df.drop(columns = drop_columns)
 
