@@ -30,59 +30,7 @@ def calculate_entropy(row):
     )
     return entropy
 
-def create_weights(chisq_df, baseline_plf_pct):
-    # 1. Add baseline plaintiff percentage and the difference from the baseline
-    chisq_df["baseline_plf"] = baseline_plf_pct
-    chisq_df["baseline_difference"] = chisq_df["pct_1"] - chisq_df["baseline_plf"]
-
-    # 2. Classify based on the absolute value of the baseline difference
-    chisq_df["classification"] = chisq_df["baseline_difference"].apply(
-        lambda x: "Baseline" if abs(x) <= 3 else
-                  "Slightly Pro-Plaintiff" if 3 < abs(x) <= 8 and x > 0 else
-                  "Slightly Pro-Defense" if 3 < abs(x) <= 8 and x < 0 else
-                  "Moderately Pro-Plaintiff" if 8 < abs(x) <= 15 and x > 0 else
-                  "Moderately Pro-Defense" if 8 < abs(x) <= 15 and x < 0 else
-                  "Strongly Pro-Plaintiff" if x > 15 else
-                  "Strongly Pro-Defense" if x < -15 else "Unknown"
-    )
-
-    # 3. Collapse classifications into general sides while leaving baseline and unknown intact
-    def collapse_side(classification):
-        if "Plaintiff" in classification:
-            return "Plaintiff"
-        elif "Defense" in classification:
-            return "Defense"
-        else:
-            return classification  # Keep "Baseline" and "Unknown" intact
-
-    chisq_df["side_collapsed"] = chisq_df["classification"].apply(collapse_side)
-
-    # 4. Calculate total counts for each side (collapsed)
-    side_counts = chisq_df["side"].value_counts()
-    total_plaintiff = side_counts.get("Plaintiff", 0)
-    total_defense = side_counts.get("Defense", 0)
-
-    # 5. Count baseline results
-    baseline_count = chisq_df[chisq_df["classification"] == "Baseline"].shape[0]
-
-    # 6. Check for any "Unknown" classifications and print relevant information
-    unknown_count = chisq_df["classification"].value_counts().get("Unknown", 0)
-    if unknown_count > 0:
-        print("Warning: There are 'Unknown' classifications.")
-        print(f"Unknown classification count: {unknown_count}")
-        print("Rows with 'Unknown' classification:")
-        print(chisq_df[chisq_df["classification"] == "Unknown"])
-        print("Examine why these classifications occurred, possibly due to missing or unanticipated data.")
-        return chisq_df  # Break the function here to prevent further processing if "Unknown" exists
-
-
-    # Add normalization factor for Pro-Plaintiff and Pro-Defense
-    chisq_df["side_weight"] = chisq_df["side"].map({
-        "Pro-Plaintiff": 1 / total_plaintiff if total_plaintiff > 0 else 0,
-        "Pro-Defense": 1 / total_defense if total_defense > 0 else 0,
-        "Neutral": 0  # Neutral cases are not weighted
-    })
-
+def create_weights(chisq_df):
     # 1. Logarithmic Weighting
     chisq_df["log_weight"] = 1 - (1 / np.log(chisq_df["N"] + 1))
 
@@ -115,14 +63,6 @@ def create_weights(chisq_df, baseline_plf_pct):
         * chisq_df["entropy_weight"]
     )
 
-    # Create scaling adjustments separately for each method
-    chisq_df["log_weight_adjusted"] = chisq_df["log_weight"] * chisq_df["side_weight"]
-    chisq_df["quadratic_weight_adjusted"] = chisq_df["quadratic_weight"] * chisq_df["side_weight"]
-    chisq_df["split_weight_log_adjusted"] = chisq_df["split_weight_log"] * chisq_df["side_weight"]
-    chisq_df["split_weight_quadratic_adjusted"] = chisq_df["split_weight_quadratic"] * chisq_df["side_weight"]
-    chisq_df["bayesian_weight_adjusted"] = chisq_df["bayesian_weight"] * chisq_df["side_weight"]
-    chisq_df["entropy_weight_adjusted"] = chisq_df["entropy_weight"] * chisq_df["side_weight"]
-    chisq_df["hybrid_weight_adjusted"] = chisq_df["hybrid_weight"] * chisq_df["side_weight"]
 
     # Normalize adjusted weights to [0, 1] for comparison
     weighting_schemes = [
