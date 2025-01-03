@@ -32,10 +32,10 @@ def calculate_entropy(row):
 
 def create_weights(chisq_df, overall_decision_rate):
     # Logarithmic Weighting
-    chisq_df["log_weight"] = 1 - (1 / np.log(chisq_df["N"] + 1))
+    chisq_df["log_weight_N"] = 1 - (1 / np.log(chisq_df["N"] + 1))
 
     # Quadratic Weighting
-    chisq_df["quadratic_weight"] = 1 - (1 / np.sqrt(chisq_df["N"]))
+    chisq_df["quadratic_weight_N"] = 1 - (1 / np.sqrt(chisq_df["N"]))
 
     # Split Difference Weighting
     chisq_df["split_difference"] = abs(chisq_df["dv_1"] - chisq_df["dv_0"])
@@ -58,7 +58,7 @@ def create_weights(chisq_df, overall_decision_rate):
 
     # Normalization of weights
     weight_columns = [
-        "log_weight", "quadratic_weight", "split_weight_log",
+        "log_weight_N", "quadratic_weight_N", "split_weight_log",
         "split_weight_quadratic", "bayesian_weight", "entropy_weight", "hybrid_weight"
     ]
 
