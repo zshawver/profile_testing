@@ -53,7 +53,7 @@ def create_weights(chisq_df, baseline_plf):
 
     # Hybrid Approach
     chisq_df["hybrid_weight"] = (
-        chisq_df["log_weight"] * chisq_df["split_weight_log"] * chisq_df["entropy_weight"]
+        chisq_df["log_weight_N"] * chisq_df["split_weight_log"] * chisq_df["entropy_weight"]
     )
 
     # Normalization of weights
