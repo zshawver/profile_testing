@@ -30,7 +30,7 @@ def calculate_entropy(row):
     )
     return entropy
 
-def create_weights(chisq_df, overall_decision_rate):
+def create_weights(chisq_df, baseline_plf):
     # Logarithmic Weighting
     chisq_df["log_weight_N"] = 1 - (1 / np.log(chisq_df["N"] + 1))
 
@@ -44,7 +44,7 @@ def create_weights(chisq_df, overall_decision_rate):
 
     # Bayesian Shrinkage
     chisq_df["bayesian_weight"] = (
-        chisq_df["N"] * chisq_df["pct_1"] + overall_decision_rate
+        chisq_df["N"] * chisq_df["pct_1"] + baseline_plf
     ) / (chisq_df["N"] + 1)
 
     # Entropy-Based Weighting
