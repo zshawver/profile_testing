@@ -16,7 +16,7 @@ pl_label = 1 #Label for Plaintiff jurors in DV
 def_label = 0 #Label for Defense jurors in DV
 
 chisq_fn: str = "Zest_ChiSqResults"+".xlsx" #Filename for chi-square output file
-chisq_sheetName: str = "Sheet1"
+chisq_sheetName: str = "pruned"
 
 #%%Import data files
 data_df = pd.read_excel(os.path.join(script_dir,"Data", data_fn), sheet_name = data_sheetName)
@@ -41,17 +41,11 @@ chisq_df = pd.read_excel(os.path.join(script_dir,"Data", chisq_fn), sheet_name =
 
 chisq_df['iv_level_tuples'] = chisq_df.apply(create_nested_tuples, axis=1)
 
-chisq_df.iloc[3520]
-
-# dietJurors = [juror for jNum, juror in jurors.items() if getattr(juror,'DIET_OR_LIFESTYLES') == 1 ]
 
 # for i, row in chisq_df.iterrows():
 #     jurors_by_iv = [getattr(juror, dv) for jNum,juror in jurors.items() if getattr(juror, row['iv']) == row['iv_level']]
 #     print(jurors_by_iv)
 
 #%%
-# Define thresholds for Pro-Plaintiff and Pro-Defense
-pro_plaintiff_threshold = .7  # Percentage threshold for Pro-Plaintiff
-pro_defense_threshold = .2    # Percentage threshold for Pro-Defense
 
-create_weights(chisq_df, pro_plaintiff_threshold, pro_defense_threshold)
+chisq_df = create_weights(chisq_df, .59)
