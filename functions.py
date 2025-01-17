@@ -30,7 +30,7 @@ def calculate_entropy(row):
     )
     return entropy
 
-def create_weights(chisq_df, baseline_plf):
+def create_weights(chisq_df, baseline_plf, n_influence, dev_influence):
     # Apply a minimum weight for zero pct_1 values
     # chisq_df["adjusted_pct_1"] = chisq_df["pct_1"].apply(lambda x: max(x, 0.001))  # 0.001 to prevent zero issues
     # chisq_df["adjusted_pct_1"] = chisq_df["pct_1"].apply(lambda x: min(x, .999))  # 0.001 to prevent zero issues
@@ -125,7 +125,7 @@ def create_weights(chisq_df, baseline_plf):
         )
 
     #Create a weight variable that gives additional influence to sample size
-    chisq_df["weight"] = (chisq_df["scaled_lnN"]*1.25)*chisq_df["normalized_dev"]
+    chisq_df["weight"] = (chisq_df["scaled_lnN"]*n_influence)*(chisq_df["normalized_dev"]*dev_influence)
     #Normalize the weight variable
     chisq_df["normalized_weight"] = (chisq_df["weight"] - chisq_df["weight"].min())/(chisq_df["weight"].max()-chisq_df["weight"].min())
 
