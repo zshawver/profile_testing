@@ -48,6 +48,6 @@ chisq_df['iv_level_tuples'] = chisq_df.apply(create_nested_tuples, axis=1)
 
 #%%
 
-plf_predictions_df = create_weights(chisq_df, .59)
+plf_predictions_df = create_weights(chisq_df, .39)
 
-plf_predictions_df.to_excel(os.path.join(script_dir, "Output", "Zest_weighted_PLF_predictions.xlsx"), index=False)
+plf_predictions_df.to_excel(os.path.join(script_dir, "Output", "Zest_weighted_PLF_predictions_bayesianonly_fakebaseline.xlsx"), index=False)

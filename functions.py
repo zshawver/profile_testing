@@ -31,50 +31,117 @@ def calculate_entropy(row):
     return entropy
 
 def create_weights(chisq_df, baseline_plf):
-    # Logarithmic Weighting
-    chisq_df["log_weight_N"] = 1 - (1 / np.log(chisq_df["N"] + 1))
+    # Apply a minimum weight for zero pct_1 values
+    # chisq_df["adjusted_pct_1"] = chisq_df["pct_1"].apply(lambda x: max(x, 0.001))  # 0.001 to prevent zero issues
+    # chisq_df["adjusted_pct_1"] = chisq_df["pct_1"].apply(lambda x: min(x, .999))  # 0.001 to prevent zero issues
 
-    # Quadratic Weighting
-    chisq_df["quadratic_weight_N"] = 1 - (1 / np.sqrt(chisq_df["N"]))
+    # Create a weight by N
+    # chisq_df["weight_by_N"] = chisq_df["N"] / chisq_df["N"].max()
 
-    # Split Difference Weighting
-    chisq_df["split_difference"] = abs(chisq_df["dv_1"] - chisq_df["dv_0"])
-    chisq_df["split_weight_log"] = 1 - (chisq_df["split_difference"] / chisq_df["N"])
-    chisq_df["split_weight_quadratic"] = 1 - (chisq_df["split_difference"] / np.sqrt(chisq_df["N"]))
+    # # Logarithmic Weighting
+    # chisq_df["log_weight_N"] = np.log(chisq_df["N"] + 1)
+
+    # # Quadratic Weighting
+    # chisq_df["quadratic_weight_N"] = (chisq_df["N"]**2)/(chisq_df["N"].max()**2)
+
+    # # Split Difference Weighting
+    # chisq_df["split_difference"] = abs(chisq_df["dv_1"] - chisq_df["dv_0"])
+    # chisq_df["split_weight_log"] = chisq_df["split_difference"] / np.log(chisq_df["N"] + 1)
+    # chisq_df["split_weight_quadratic"] = chisq_df["split_difference"] / np.sqrt(chisq_df["N"])
 
     # Bayesian Shrinkage
-    chisq_df["bayesian_weight"] = (
-        chisq_df["N"] * chisq_df["pct_1"] + baseline_plf
-    ) / (chisq_df["N"] + 1)
+    # chisq_df["bayesian_weight"] = (
+    #     chisq_df["N"] * chisq_df["adjusted_pct_1"] + baseline_plf
+    # ) / (chisq_df["N"] + 1)
 
     # Entropy-Based Weighting
-    chisq_df["entropy"] = chisq_df.apply(calculate_entropy, axis=1)
-    chisq_df["entropy_weight"] = 1 - chisq_df["entropy"]
+    # chisq_df["entropy"] = chisq_df.apply(calculate_entropy, axis=1)
+    # chisq_df["entropy_weight"] = 1 - chisq_df["entropy"]
+
+    # # Hybrid Approach
+    # chisq_df["hybrid_weight"] = (
+    #     chisq_df["log_weight_N"] * chisq_df["split_weight_log"] * chisq_df["entropy_weight"]
+    # )
+
+    # # Normalization of weights
+    # weight_columns = [
+    #     "log_weight_N", "quadratic_weight_N", "split_weight_log",
+    #     "split_weight_quadratic", "bayesian_weight", "entropy_weight", "hybrid_weight"
+    # ]
 
     # Hybrid Approach
-    chisq_df["hybrid_weight"] = (
-        chisq_df["log_weight_N"] * chisq_df["split_weight_log"] * chisq_df["entropy_weight"]
-    )
+    # chisq_df["hybrid_weight"] = (
+    #     chisq_df["weight_by_N"] * chisq_df["bayesian_weight"] * chisq_df["entropy_weight"]
+    # )
 
     # Normalization of weights
-    weight_columns = [
-        "log_weight_N", "quadratic_weight_N", "split_weight_log",
-        "split_weight_quadratic", "bayesian_weight", "entropy_weight", "hybrid_weight"
-    ]
+    # weight_columns = [
+    #     "weight_by_N", "bayesian_weight", "entropy_weight", "hybrid_weight"
+    # ]
 
-    for col in weight_columns:
-        normalized_col = f"normalized_{col}"
-        chisq_df[normalized_col] = (chisq_df[col] - chisq_df[col].min()) / (chisq_df[col].max() - chisq_df[col].min())
+    # weight_columns = [
+    #     "bayesian_weight"
+    # ]
 
-    # Apply normalized weights to Plaintiff Percentage for predictions
-    for col in weight_columns:
-        normalized_col = f"normalized_{col}"  # Use the normalized version of the weight
-        prediction_col = f"{col}_prediction"
-        chisq_df[prediction_col] = chisq_df[normalized_col] * chisq_df["pct_1"]
+    # for col in weight_columns:
+    #     normalized_col = f"normalized_{col}"
+    #     chisq_df[normalized_col] = (chisq_df[col] - chisq_df[col].min()) / (chisq_df[col].max() - chisq_df[col].min())
 
-    # drop_columns = [col for col in chisq_df if "_prediction" not in col and col != "iv_level_tuples" and col != "pct_1"]
+    # # Apply normalized weights to Plaintiff Percentage for predictions
+    # for col in weight_columns:
+    #     normalized_col = f"normalized_{col}"  # Use the normalized version of the weight
+    #     prediction_col = f"{col}_prediction"
+    #     chisq_df[prediction_col] = chisq_df[normalized_col] * chisq_df["adjusted_pct_1"]
 
-    # chisq_df = chisq_df.drop(columns = drop_columns)
+    #Normalize deviations in each direction
+
+    #Get deviation from baseline for each plaintiff result
+    chisq_df["dev"] = chisq_df["pct_1"] - baseline_plf
+    #Get min and max deviations for both pro-PL and pro-DF deviations
+    min_PL_Dev = chisq_df.loc[chisq_df["dev"] >= 0, "dev"].min()
+    max_PL_Dev = chisq_df.loc[chisq_df["dev"] >= 0, "dev"].max()
+    min_DF_Dev = chisq_df.loc[chisq_df["dev"] < 0, "dev"].min()
+    max_DF_Dev = chisq_df.loc[chisq_df["dev"] < 0, "dev"].max()
+    chisq_df["normalized_dev"] = np.where(
+        chisq_df["dev"] >= 0, (chisq_df["dev"]-min_PL_Dev)/(max_PL_Dev-min_PL_Dev),
+        (chisq_df["dev"]-max_DF_Dev)/(min_DF_Dev-max_DF_Dev)
+        )
+
+    #Scale N by the max N for each test type
+
+    #Get max N for each test type
+    max_N_ME = chisq_df.loc[chisq_df["type"] == "ME", "N"].max()
+    max_N_2Way = chisq_df.loc[chisq_df["type"] == "2-Way", "N"].max()
+    max_N_3Way = chisq_df.loc[chisq_df["type"] == "3-Way", "N"].max()
+    #Get the natural log of N
+    chisq_df["lnN"] = np.log(chisq_df["N"])
+    #Divide each logged N by the natural log of N for its test type
+    chisq_df["scaled_lnN"] = np.where(
+        chisq_df["type"] == "ME", chisq_df["lnN"]/np.log(max_N_ME),
+        np.where(
+            chisq_df["type"] == "2-Way", chisq_df["lnN"]/np.log(max_N_2Way),
+            chisq_df["lnN"]/np.log(max_N_3Way)
+            )
+        )
+
+    #Create a weight variable that gives additional influence to sample size
+    chisq_df["weight"] = (chisq_df["scaled_lnN"]*1.25)*chisq_df["normalized_dev"]
+    #Normalize the weight variable
+    chisq_df["normalized_weight"] = (chisq_df["weight"] - chisq_df["weight"].min())/(chisq_df["weight"].max()-chisq_df["weight"].min())
+
+    #Creating predictions for %Plaintiff
+
+    #Based on weight
+    chisq_df["prediction_weight"] = ((1-chisq_df["weight"])*baseline_plf+(chisq_df["weight"]*chisq_df["pct_1"]))
+    #Based on normalized weight
+    chisq_df["prediction_normalized_weight"] = ((1-chisq_df["normalized_weight"])*baseline_plf+(chisq_df["normalized_weight"]*chisq_df["pct_1"]))
+
+
+
+
+    drop_columns = [col for col in chisq_df if "_prediction" not in col and col != "iv_level_tuples" and col != "pct_1" and col != "N"]
+
+    chisq_df = chisq_df.drop(columns = drop_columns)
 
     return chisq_df
 
