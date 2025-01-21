@@ -24,25 +24,20 @@ def prepare_juror_lists(df: pd.DataFrame,dv: str,juror_name: str,plaintiff_label
     #Separate out plaintiff and defense jurors
     return jurors, {jNum:j for jNum,j in jurors.items() if getattr(j,dv) == plaintiff_label}, {jNum:j for jNum,j in jurors.items() if getattr(j,dv) == defense_label}
 
-def prepare_random_samples_of_jurors(N: int, iterations: int, pJurors: dict, dJurors: dict) -> list:
-    #Get juror numbers for plaintiff and defense
-    plaintiffJNums = np.array(list(plaintiffJurors.keys()))
-    defenseJNums = np.array(list(defenseJurors.keys()))
+def prepare_random_samples_of_jurors(N: int, iterations: int, jurors: dict) -> list:
+    #Create list of just juror numbers for Jurors
+    juror_nums = np.array(list(jurors.keys()))
 
-    #Get Jurors for plaintiff and defense
-    plaintiffJurorList = np.array(list(plaintiffJurors.values()))
-    defenseJurorList = np.array(list(defenseJurors.values()))
+    #Create list of just Jurors
+    juror_list = np.array(list(jurors.values()))
+
     #Get a random sample of indices representing jurors
-    plaintiffSampleIDXs = [np.random.choice(len(plaintiffJNums), size=N, replace=False) for i in range(iterations)]
-    defenseSampleIDXs = [np.random.choice(len(defenseJNums), size=N, replace=False) for i in range(iterations)]
+    sample_IDXs = [np.random.choice(len(juror_nums), size=N, replace=False) for i in range(iterations)]
 
-    #Gather the random sample of jurors into a list of lists
-    plaintiffSamples = [list(plaintiffJurorList[idx]) for idx in plaintiffSampleIDXs]
-    defenseSamples = [list(defenseJurorList[idx]) for idx in defenseSampleIDXs]
+    #Gather the random sample of Jurors into a list of lists
+    juror_samples = [list(juror_list[idx]) for idx in sample_IDXs]
 
-    #Combine the plaintiff and defense samples into a single list of lists
-    jurorSamples = plaintiffSamples+defenseSamples
-    return jurorSamples, plaintiffSamples, defenseSamples
+    return juror_samples
 
 def prepare_iv_lists(df: pd.DataFrame) -> list:
 
