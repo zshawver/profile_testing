@@ -40,15 +40,16 @@ def prepare_random_samples_of_jurors(N: int, iterations: int, jurors: dict) -> l
     return juror_samples
 
 def prepare_iv_lists(df: pd.DataFrame) -> list:
-
     #IV lists
     ivs = [col for col in df] #Individual IVs
-    ivs_2ways = list(combinations(ivs, 2)) #2-IV combos
-    ivs_3ways = list(combinations(ivs, 3)) #3-IV combos
-    ivs_4ways = list(combinations(ivs, 4)) #4-IV combos
+    ivs_5ways = list(combinations(ivs, 5)) #5-IV combos
 
-    #Gather all combinations of IVs into a single list
-    return ivs_2ways+ivs_3ways+ivs_4ways
+    return ivs_5ways
+
+def generate_combinations(batch: list, max_comb = 3) -> list:
+    all_combinations = [combinations(batch, r) for r in range (1, max_comb+3)]
+    return all_combinations
+
 
 def prepare_sample_ivs_list(samples: list, iv_combos: list) -> list:
     return [[sample,iv_combo] for iv_combo in iv_combos for sample in samples]
