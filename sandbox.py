@@ -2,6 +2,9 @@
 import pandas as pd
 from itertools import combinations
 import numpy as np
+from multiprocessing import Pool
+
+
 
 
 # Generate all combinations for 1-IV, 2-IV, and 3-IV tests
@@ -42,39 +45,43 @@ def filter_results_by_combinations(df, combinations):
     # Concatenate all matching rows into a single DataFrame
     return pd.concat(filtered_results, ignore_index=True)
 
-chi_square_results_FL = pd.read_excel('C:/Users/zshawver/OneDrive - Dubin Consulting/Profile Testing/Data/FLOpioidsFG_Results_WeightTesting.xlsx',sheet_name='results')
+chi_square_results_FL = pd.read_excel('C:/Users/zshawver/OneDrive - Dubin Consulting/Profile Testing/Data/FL_Opioids_DeDupedResults.xlsx')
 
-chi_square_results = pd.DataFrame({
-    'IV': ['Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split'],
-    'Control_1': ['Age_50Split','Age_50Split','Age_40Split','Age_40Split','Age_50Split','Age_50Split','Age_60Split','AGE_RANGE'],
-    'Control_2': ['AGRMT_PHARMA_ROLE_1_COLLAPSED','GENDER','SAT_INFLUENCE_OF_BUS_3_COLLAPSED','LC__PROFIT_COMPARE_3','SAT_INFLUENCE_OF_BUS_3_COLLAPSED',"SAT_INFLUENCE_OF_BUS_3_COLLAPSED","COLLAR",None],
-    'IVLabel': ['Age Greater than 30','Age Greater than 30','Age Greater than 30','Age Greater than 30','Age Greater than 30','Age Greater than 30','Age Greater than 30','Age Greater than 30'],
-    'Control_1_Label': ["Age Greater than 50","Age Greater than 50","Age Less Than 40","Age Less Than 40","Age Less Than 50","Age Less Than 50","Age Less Than 60","Age: 70+"],
-    'Control_2_Label': ["Agreement that Pharmacists must distinguish between good and bad doctors: Strongly or somewhat disagree","Gender: Man",'Agreement with "Large corporations have positive effect on community": Strongly or somewhat agree',"Belives that Walmart Is equally as profitable as other corporations",'Agreement with "Large corporations have positive effect on community": Strongly or somewhat agree','Agreement with "Large corporations have positive effect on community": Strongly or somewhat disagree',"Collar: Blue Collar",None],
-    '%PL': [.08,.15,.0001,.0001,.0001,.71,.73,.0001],
-    'weighted_prediction': [.15,.22,.15,.15,.09,.51,.56,.09]
-})
+# chi_square_results = pd.DataFrame({
+#     'IV': ['Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split'],
+#     'Control_1': ['Age_50Split','Age_50Split','Age_40Split','Age_40Split','Age_50Split','Age_50Split','Age_60Split','AGE_RANGE'],
+#     'Control_2': ['AGRMT_PHARMA_ROLE_1_COLLAPSED','GENDER','SAT_INFLUENCE_OF_BUS_3_COLLAPSED','LC__PROFIT_COMPARE_3','SAT_INFLUENCE_OF_BUS_3_COLLAPSED',"SAT_INFLUENCE_OF_BUS_3_COLLAPSED","COLLAR",None],
+#     'IVLabel': ['Age Greater than 30','Age Greater than 30','Age Greater than 30','Age Greater than 30','Age Greater than 30','Age Greater than 30','Age Greater than 30','Age Greater than 30'],
+#     'Control_1_Label': ["Age Greater than 50","Age Greater than 50","Age Less Than 40","Age Less Than 40","Age Less Than 50","Age Less Than 50","Age Less Than 60","Age: 70+"],
+#     'Control_2_Label': ["Agreement that Pharmacists must distinguish between good and bad doctors: Strongly or somewhat disagree","Gender: Man",'Agreement with "Large corporations have positive effect on community": Strongly or somewhat agree',"Belives that Walmart Is equally as profitable as other corporations",'Agreement with "Large corporations have positive effect on community": Strongly or somewhat agree','Agreement with "Large corporations have positive effect on community": Strongly or somewhat disagree',"Collar: Blue Collar",None],
+#     '%PL': [.08,.15,.0001,.0001,.0001,.71,.73,.0001],
+#     'weighted_prediction': [.15,.22,.15,.15,.09,.51,.56,.09]
+# })
 
-ivs = ['Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_50Split','Age_50Split','Age_40Split','Age_40Split','Age_50Split','Age_50Split','Age_60Split','AGE_RANGE','AGRMT_PHARMA_ROLE_1_COLLAPSED','GENDER','SAT_INFLUENCE_OF_BUS_3_COLLAPSED','LC__PROFIT_COMPARE_3','SAT_INFLUENCE_OF_BUS_3_COLLAPSED',"SAT_INFLUENCE_OF_BUS_3_COLLAPSED","COLLAR",None]
+# ivs = ['Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_30Split','Age_50Split','Age_50Split','Age_40Split','Age_40Split','Age_50Split','Age_50Split','Age_60Split','AGE_RANGE','AGRMT_PHARMA_ROLE_1_COLLAPSED','GENDER','SAT_INFLUENCE_OF_BUS_3_COLLAPSED','LC__PROFIT_COMPARE_3','SAT_INFLUENCE_OF_BUS_3_COLLAPSED',"SAT_INFLUENCE_OF_BUS_3_COLLAPSED","COLLAR",None]
 
+ivs = list(set(iv for iv in chi_square_results_FL['IV']))
 
-ivs_5_ways = combinations(list(set(iv for iv in ivs if iv is not None)), 5)
+control1_ivs = list(set(iv for iv in chi_square_results_FL['control_1'] if iv not in ivs and iv is not np.nan))
 
-ivs_5_ways_lst = list(map(list,ivs_5_ways))
+control2_ivs = list(set(iv for iv in chi_square_results_FL['control_2'] if iv not in ivs and iv not in control1_ivs and iv is not np.nan))
+
+allIVs = ivs+control1_ivs+control2_ivs
+
+ivs_5_ways = combinations(allIVs, 5)
+
+# ivs_5_ways_lst = list(map(list,ivs_5_ways))
 
 #Get a single batch of 5 ivs combo
-batch = next((item for item in reversed(ivs_5_ways_lst) if 'Age_30Split' in item))
+batch = next((item for item in reversed(ivs_5_ways) if 'Age_30Split' in item))
 
-combinations = generate_combinations(batch)
+for batch in ivs_5_ways:
+    combinations = generate_combinations(batch)
 
-filtered_results = filter_results_by_combinations(chi_square_results, combinations)
+    filtered_results = filter_results_by_combinations(chi_square_results_FL, combinations)
 
 
-print(chi_square_results.info())
 
-print(chi_square_results.head())
-
-print("Original Results Shape:", chi_square_results.shape)
 
 # Example juror_data
 juror_data = pd.DataFrame({
