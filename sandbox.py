@@ -49,43 +49,51 @@ from functions import create_weights, filter_results_by_combinations, match_juro
 
 
 
-
+#Information about juror data file
 data_file = "C:/Users/zshawver/OneDrive - Dubin Consulting/Profile Testing/Data/FL_Opioids_JurorData.xlsx"
 sheet_name = "use-labels"
-dv = "DV_1PL_0Def"
+dv = "DV_1PL_0Def" #DV variable
+juror_id = "NAME" #Juror id variable
 
-
+#Read in juror data file
 juror_data_FL = pd.read_excel(data_file,sheet_name=sheet_name)
 
-chi_square_results_FL = pd.read_excel('C:/Users/zshawver/OneDrive - Dubin Consulting/Profile Testing/Data/FL_Opioids_DeDupedResults.xlsx')
-plf_predictions_df = create_weights(chi_square_results_FL, .39, n_influence = 1.5)
+#Create a df of variables to use
 use_cols_df = pd.read_excel(data_file, sheet_name="use cols")
 
-use_cols = [var for var in use_cols_df['use_cols']]
+#Create list of IVs for combinations
+ivs = [var for var in use_cols_df['use_cols']]
 
-# Load data from Excel
-# df = pd.read_excel(data_file, sheet_name=sheet_name)
-
-drop_cols = [col for col in juror_data_FL.columns if col not in use_cols or col == dv or col != "NAME"] #+ df.columns[df.isnull().sum() > 0].tolist()
+#Identify variables to drop from
+drop_cols = [col for col in juror_data_FL.columns if col not in ivs and col != dv and col != juror_id]
 
 juror_data_FL = juror_data_FL.drop(columns = drop_cols)
 
-juror_data_FL
 
-ivs = [column for column in juror_data_FL.columns if column != "NAME"]
+#Read in chi-square results file
+chi_square_results_FL = pd.read_excel('C:/Users/zshawver/OneDrive - Dubin Consulting/Profile Testing/Data/FL_Opioids_DeDupedResults.xlsx')
 
-print(ivs)
+#Create a df of plaintiff predictions from chi square results
+plf_predictions_df = create_weights(chi_square_results_FL, .39, n_influence = 1.5)
 
+
+#Create batches of combinations of 5 IVs
 five_iv_combos = combinations(ivs, 5)
 
 combination = next(five_iv_combos)
 combinations = generate_combinations(combination)
 filtered_results = filter_results_by_combinations(chi_square_results_FL, combinations)
-matched_results = match_jurors(juror_data_FL, filtered_results)
+matched_results = match_jurors(juror_data_FL, \
+                               filtered_results,\
+                               juror_id, \
+                               'IV','IV_Label', \
+                               'control_1','Control_1', \
+                               'control_2','Control_2', \
+                               'prediction')
 
 for batch in five_iv_combos:
     combinations = generate_combinations(batch)
-    filtered_results = filter_results_by_combinations(chi_square_results_FL, combinations)
+    filtered_results = filter_results_by_combinations(plf_predictions_df, combinations)
     matched_results = match_jurors(juror_data_FL, filtered_results)
 
 
