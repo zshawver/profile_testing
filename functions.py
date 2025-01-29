@@ -76,11 +76,9 @@ def create_weights(chisq_df, baseline_plf, n_influence = 1, dev_influence = 1):
     # chisq_df["prediction_normalized_weight"] = ((1-chisq_df["normalized_weight"])*baseline_plf+(chisq_df["normalized_weight"]*chisq_df["pct_1"]))
 
 
+    drop_cols = ["pct_0","type","dev","normalized_dev","lnN","scaled_lnN","weight"]
 
-
-    # drop_columns = [col for col in chisq_df if "_prediction" not in col and col != "iv_level_tuples" and col != "pct_1" and col != "N"]
-
-    # chisq_df = chisq_df.drop(columns = drop_columns)
+    chisq_df = chisq_df.drop(columns = drop_cols)
 
     return chisq_df
 
