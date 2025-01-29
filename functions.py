@@ -64,15 +64,15 @@ def create_weights(chisq_df, baseline_plf, n_influence = 1, dev_influence = 1):
 
     #Create a weight variable that gives additional influence to sample size
     chisq_df["weight"] = (chisq_df["scaled_lnN"]*n_influence)*(chisq_df["normalized_dev"]*dev_influence)
-    #Normalize the weight variable
-    chisq_df["normalized_weight"] = (chisq_df["weight"] - chisq_df["weight"].min())/(chisq_df["weight"].max()-chisq_df["weight"].min())
+    # #Normalize the weight variable
+    # chisq_df["normalized_weight"] = (chisq_df["weight"] - chisq_df["weight"].min())/(chisq_df["weight"].max()-chisq_df["weight"].min())
 
     #Creating predictions for %Plaintiff
 
     #Based on weight
-    chisq_df["prediction_weight"] = ((1-chisq_df["weight"])*baseline_plf+(chisq_df["weight"]*chisq_df["pct_1"]))
-    #Based on normalized weight
-    chisq_df["prediction_normalized_weight"] = ((1-chisq_df["normalized_weight"])*baseline_plf+(chisq_df["normalized_weight"]*chisq_df["pct_1"]))
+    chisq_df["prediction"] = ((1-chisq_df["weight"])*baseline_plf+(chisq_df["weight"]*chisq_df["pct_1"]))
+    # #Based on normalized weight
+    # chisq_df["prediction_normalized_weight"] = ((1-chisq_df["normalized_weight"])*baseline_plf+(chisq_df["normalized_weight"]*chisq_df["pct_1"]))
 
 
 
