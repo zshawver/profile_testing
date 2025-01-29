@@ -97,10 +97,9 @@ def create_nested_tuples(row):
 
 # Generate all combinations for 1-IV, 2-IV, and 3-IV tests
 def generate_combinations(batch, max_comb=3):
-    all_combinations = []
     for r in range(1, max_comb + 1):
-        all_combinations.extend(combinations(batch, r))
-    return all_combinations
+        yield from combinations(batch, r)  # Yielding instead of storing
+
 
 # Function to filter results by combinations
 def filter_results_by_combinations(df, combinations):
