@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from juror import Juror
+from itertools import combinations
 
 def prepare_juror_lists(df: pd.DataFrame, dv, juror_name: str, plaintiff_label, defense_label) -> dict:
 
@@ -95,6 +96,47 @@ def create_nested_tuples(row):
             nested_tuples.append((iv, level))
     return tuple(nested_tuples)
 
+
+# Generate all combinations for 1-IV, 2-IV, and 3-IV tests
+def generate_combinations(batch, max_comb=3):
+    all_combinations = []
+    for r in range(1, max_comb + 1):
+        all_combinations.extend(combinations(batch, r))
+    return all_combinations
+
+# Function to filter results by combinations
+def filter_results_by_combinations(df, combinations):
+    """
+    Filters rows in `df` to only include those where the IVs match
+    any of the provided combinations exactly.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing chi-square results.
+        combinations (list of lists): List of IV combinations to match.
+
+    Returns:
+        pd.DataFrame: Filtered DataFrame containing only matching rows.
+    """
+    # Initialize a list to collect filtered DataFrames for each combo
+    filtered_results = []
+
+    for combo in combinations:
+        combo_set = set(combo)  # Convert combo to a set
+
+        # Filter rows where the IVs match the combo exactly
+        matching_rows = df[
+            df[['IV', 'Control_1', 'Control_2']].apply(
+                lambda row: set(row.dropna()) == combo_set, axis=1
+            )
+        ]
+
+        filtered_results.append(matching_rows)  # Add the matching rows
+
+    # Concatenate all matching rows into a single DataFrame
+    return pd.concat(filtered_results, ignore_index=True)
+
+
+# Function to match juror responses with filtered results
 def match_jurors(juror_data, filtered_results,name,iv1,iv1_label,iv2,iv2_label,iv3,iv3label,prediction_column):
     results = []
 
