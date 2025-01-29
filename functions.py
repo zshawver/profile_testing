@@ -30,69 +30,7 @@ def calculate_entropy(row):
     )
     return entropy
 
-def create_weights(chisq_df, baseline_plf, n_influence, dev_influence):
-    # Apply a minimum weight for zero pct_1 values
-    # chisq_df["adjusted_pct_1"] = chisq_df["pct_1"].apply(lambda x: max(x, 0.001))  # 0.001 to prevent zero issues
-    # chisq_df["adjusted_pct_1"] = chisq_df["pct_1"].apply(lambda x: min(x, .999))  # 0.001 to prevent zero issues
-
-    # Create a weight by N
-    # chisq_df["weight_by_N"] = chisq_df["N"] / chisq_df["N"].max()
-
-    # # Logarithmic Weighting
-    # chisq_df["log_weight_N"] = np.log(chisq_df["N"] + 1)
-
-    # # Quadratic Weighting
-    # chisq_df["quadratic_weight_N"] = (chisq_df["N"]**2)/(chisq_df["N"].max()**2)
-
-    # # Split Difference Weighting
-    # chisq_df["split_difference"] = abs(chisq_df["dv_1"] - chisq_df["dv_0"])
-    # chisq_df["split_weight_log"] = chisq_df["split_difference"] / np.log(chisq_df["N"] + 1)
-    # chisq_df["split_weight_quadratic"] = chisq_df["split_difference"] / np.sqrt(chisq_df["N"])
-
-    # Bayesian Shrinkage
-    # chisq_df["bayesian_weight"] = (
-    #     chisq_df["N"] * chisq_df["adjusted_pct_1"] + baseline_plf
-    # ) / (chisq_df["N"] + 1)
-
-    # Entropy-Based Weighting
-    # chisq_df["entropy"] = chisq_df.apply(calculate_entropy, axis=1)
-    # chisq_df["entropy_weight"] = 1 - chisq_df["entropy"]
-
-    # # Hybrid Approach
-    # chisq_df["hybrid_weight"] = (
-    #     chisq_df["log_weight_N"] * chisq_df["split_weight_log"] * chisq_df["entropy_weight"]
-    # )
-
-    # # Normalization of weights
-    # weight_columns = [
-    #     "log_weight_N", "quadratic_weight_N", "split_weight_log",
-    #     "split_weight_quadratic", "bayesian_weight", "entropy_weight", "hybrid_weight"
-    # ]
-
-    # Hybrid Approach
-    # chisq_df["hybrid_weight"] = (
-    #     chisq_df["weight_by_N"] * chisq_df["bayesian_weight"] * chisq_df["entropy_weight"]
-    # )
-
-    # Normalization of weights
-    # weight_columns = [
-    #     "weight_by_N", "bayesian_weight", "entropy_weight", "hybrid_weight"
-    # ]
-
-    # weight_columns = [
-    #     "bayesian_weight"
-    # ]
-
-    # for col in weight_columns:
-    #     normalized_col = f"normalized_{col}"
-    #     chisq_df[normalized_col] = (chisq_df[col] - chisq_df[col].min()) / (chisq_df[col].max() - chisq_df[col].min())
-
-    # # Apply normalized weights to Plaintiff Percentage for predictions
-    # for col in weight_columns:
-    #     normalized_col = f"normalized_{col}"  # Use the normalized version of the weight
-    #     prediction_col = f"{col}_prediction"
-    #     chisq_df[prediction_col] = chisq_df[normalized_col] * chisq_df["adjusted_pct_1"]
-
+def create_weights(chisq_df, baseline_plf, n_influence = 1, dev_influence = 1):
     #Normalize deviations in each direction
 
     #Get deviation from baseline for each plaintiff result
@@ -139,9 +77,9 @@ def create_weights(chisq_df, baseline_plf, n_influence, dev_influence):
 
 
 
-    drop_columns = [col for col in chisq_df if "_prediction" not in col and col != "iv_level_tuples" and col != "pct_1" and col != "N"]
+    # drop_columns = [col for col in chisq_df if "_prediction" not in col and col != "iv_level_tuples" and col != "pct_1" and col != "N"]
 
-    chisq_df = chisq_df.drop(columns = drop_columns)
+    # chisq_df = chisq_df.drop(columns = drop_columns)
 
     return chisq_df
 
@@ -156,3 +94,29 @@ def create_nested_tuples(row):
         if pd.notna(iv) and pd.notna(level):  # Include only non-NaN pairs
             nested_tuples.append((iv, level))
     return tuple(nested_tuples)
+
+def match_jurors(juror_data, filtered_results,name,iv1,iv1_label,iv2,iv2_label,iv3,iv3label,prediction_column):
+    results = []
+
+    for _, row in filtered_results.iterrows():
+        # Extract relevant columns and labels from the current row
+        iv_col, c1_col, c2_col = row[iv1], row[iv2], row[iv3]
+        iv_label, c1_label, c2_label = row[iv1_label], row[iv2_label], row[iv3label]
+        prediction = row[prediction_column]
+
+        # Create boolean condition to match jurors
+        condition = (
+            (juror_data[iv_col] == iv_label) &
+            (juror_data[c1_col] == c1_label if pd.notna(c1_col) else True) &
+            (juror_data[c2_col] == c2_label if pd.notna(c2_col) else True)
+        )
+
+        # Filter matching jurors
+        matched_jurors = juror_data[condition]
+        for _, juror in matched_jurors.iterrows():
+            results.append({
+                'NAME': juror['NAME'],
+                'weighted_prediction': prediction
+            })
+
+    return pd.DataFrame(results)
