@@ -45,68 +45,158 @@ from itertools import combinations
 # import numpy as np
 # from multiprocessing import Pool
 from functions import create_weights, filter_results_by_combinations, match_jurors, generate_combinations
+import os
 
-
-
+# Function to check if all non-NaN IVs in the row are in the list
+def row_in_ivs(row, ivs):
+    row = row.dropna()  # Remove NaN values
+    return all(iv in ivs for iv in row)
 
 #Information about juror data file
-data_file = "C:/Users/zshawver/OneDrive - Dubin Consulting/Profile Testing/Data/FL_Opioids_JurorData.xlsx"
-sheet_name = "use-labels"
+data_folder = "C:/Users/zshawver/OneDrive - Dubin Consulting/Profile Testing/Data"
+juror_data_fn = "FL_Opioids_JurorData.xlsx"
+chisq_results_fn = "2025-01-29_11-02_FLOpioids_ProfileTesting_ResultsForProfileTesting.xlsx"
+juror_data_filepath = os.path.join(data_folder, juror_data_fn)
+chisq_results_filepath = os.path.join(data_folder, chisq_results_fn)
+sheet_name = "use-values"
 dv = "DV_1PL_0Def" #DV variable
 juror_id = "NAME" #Juror id variable
 
 #Read in juror data file
-juror_data_FL = pd.read_excel(data_file,sheet_name=sheet_name)
+juror_data_FL = pd.read_excel(juror_data_filepath,sheet_name=sheet_name)
 
 #Create a df of variables to use
-use_cols_df = pd.read_excel(data_file, sheet_name="use cols")
+use_cols_df = pd.read_excel(juror_data_filepath, sheet_name="use cols")
 
 #Create list of IVs for combinations
 ivs = [var for var in use_cols_df['use_cols']]
 
-#Identify variables to drop from
+#Identify variables to drop from juror dataset
 drop_cols = [col for col in juror_data_FL.columns if col not in ivs and col != dv and col != juror_id]
 
 juror_data_FL = juror_data_FL.drop(columns = drop_cols)
 
 
+
+
+
+
 #Read in chi-square results file
-chi_square_results_FL = pd.read_excel('C:/Users/zshawver/OneDrive - Dubin Consulting/Profile Testing/Data/FL_Opioids_DeDupedResults.xlsx')
+chi_square_results_FL = pd.read_excel(chisq_results_filepath)
+
+#Filter out results with an not in ivs list
+chi_square_results_FL = chi_square_results_FL[chi_square_results_FL[['iv1', 'iv2', 'iv3']].apply(lambda row: row_in_ivs(row, ivs), axis=1)]
+
 
 #Create a df of plaintiff predictions from chi square results
 plf_predictions_df = create_weights(chi_square_results_FL, .39, n_influence = 1.5)
+# Precompute unique row IV sets
+plf_predictions_df["iv_sets"] = plf_predictions_df[['iv1', 'iv2', 'iv3']].apply(lambda row: frozenset(row.dropna()), axis=1)
 
 
 #Create batches of combinations of 5 IVs
 five_iv_combos = combinations(ivs, 5)
 
-combination = next(five_iv_combos)
-combinations = generate_combinations(combination)
-filtered_results = filter_results_by_combinations(chi_square_results_FL, combinations)
-matched_results = match_jurors(juror_data_FL, \
-                               filtered_results,\
-                               juror_id, \
-                               'IV','IV_Label', \
-                               'control_1','Control_1', \
-                               'control_2','Control_2', \
-                               'prediction')
+# combination = next(five_iv_combos)
+# combinations = generate_combinations(combination)
+# filtered_results = filter_results_by_combinations(plf_predictions_df, combinations)
+# matched_results = match_jurors(juror_data_FL, \
+#                                filtered_results,\
+#                                juror_id, \
+#                                'IV','IV_Label', \
+#                                'control_1','Control_1', \
+#                                'control_2','Control_2', \
+#                                'prediction')
 
-for batch in five_iv_combos:
-    combinations = generate_combinations(batch)
-    filtered_results = filter_results_by_combinations(plf_predictions_df, combinations)
-    matched_results = match_jurors(juror_data_FL, filtered_results)
+# for batch in five_iv_combos:
+#     combinations = generate_combinations(batch)
+#     filtered_results = filter_results_by_combinations(plf_predictions_df, combinations)
+#     matched_results = match_jurors(juror_data_FL, filtered_results)
 
 
 
-print(matched_results)
+# print(matched_results)
 
-for _,row in matched_results.iterrows():
-    print(row['NAME'],row['weighted_prediction'])
+# for _,row in matched_results.iterrows():
+#     print(row['NAME'],row['weighted_prediction'])
 
-for _,row in juror_data_FL.iterrows():
-    if row['NAME'] in matched_results['NAME'].values:
-        match_index = matched_results[matched_results['NAME'] == row['NAME']].index[0]
-        # Pull a value from another column using that index
-        prediction = matched_results.loc[match_index, 'weighted_prediction']
-        outcome = row['DV_1PL_0Def']
-        print(f"{row['NAME']}, predicted {prediction} %PL was {outcome}")
+# for _,row in juror_data_FL.iterrows():
+#     if row['NAME'] in matched_results['NAME'].values:
+#         match_index = matched_results[matched_results['NAME'] == row['NAME']].index[0]
+#         # Pull a value from another column using that index
+#         prediction = matched_results.loc[match_index, 'weighted_prediction']
+#         outcome = row['DV_1PL_0Def']
+#         print(f"{row['NAME']}, predicted {prediction:.0%} PL was {outcome}")
+
+
+ivs_small = ivs[:7]
+
+small_iv_combos = combinations(ivs_small, 5)
+batch = next(small_iv_combos)
+
+
+
+# start_time = time.time()
+
+# all_results = []
+# for i, combination in enumerate(small_iv_combos):
+#     combinations = generate_combinations(combination)
+#     filtered_results = filter_results_by_combinations(plf_predictions_df, combinations)
+#     matched_results = match_jurors(juror_data_FL, filtered_results, juror_id,
+#                                    'IV', 'IV_Label', 'control_1', 'Control_1',
+#                                    'control_2', 'Control_2', 'prediction')
+#     all_results.append(matched_results)
+#     print(i)
+
+# # Save output
+# df_final = pd.concat(all_results)
+# # df_final.to_parquet("juror_predictions.parquet", index=False)
+
+# end_time = time.time()
+# print(f"Serial Execution Time: {end_time - start_time:.2f} seconds")
+
+
+def filter_results_by_combinations_new(df, combinations):
+    # Convert combinations to frozensets
+    combo_sets = {frozenset(combo) for combo in combinations}
+
+    # Vectorized filtering: Keep only rows with matching IV sets
+    # matching_rows = df[df['iv_sets'].isin(combo_sets)]
+    matching_rows = df[df['iv_sets'].apply(lambda x: x in combo_sets)]
+
+    return matching_rows
+
+
+
+# start_time = time.time()
+import timeit
+def combo_and_filter(batch,plf_predictions_df):
+    combos = generate_combinations(batch)
+    filtered_results = filter_results_by_combinations(plf_predictions_df, combos)
+
+def combo_and_filter_new(batch,plf_predictions_df):
+    combos = generate_combinations(batch)
+    filtered_results = filter_results_by_combinations_new(plf_predictions_df, combos)
+    return filtered_results
+
+
+batch = ('Age_30Split', 'SAT_INFLUENCE_OF_BUS_1_COLLAPSED', 'LC__PROFIT_COMPARE_3', 'COLLAR', 'ASSOCIATION')
+combos = generate_combinations(batch)
+filtered_results = filter_results_by_combinations_new(plf_predictions_df, combos)
+# filtered_results = combo_and_filter_new(batch,plf_predictions_df)
+
+other_filtered_results = combo_and_filter_new(batch,plf_predictions_df)
+
+
+# for combo in combos:
+#     print(combo)
+
+execution_time = timeit.timeit('combo_and_filter_new(batch,plf_predictions_df)', globals=globals(), number=2000)
+
+print(f"Average Execution Time: {execution_time / 2000:.10f} seconds")
+
+
+# end_time = time.time()
+# total_time_list = end_time-start_time
+# total_time_generator = end_time-start_time
+# print(f"Execution Time: {end_time - start_time:.1000f} seconds")

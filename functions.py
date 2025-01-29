@@ -102,18 +102,8 @@ def generate_combinations(batch, max_comb=3):
 
 
 # Function to filter results by combinations
-def filter_results_by_combinations(df, combinations):
-    """
-    Filters rows in `df` to only include those where the IVs match
-    any of the provided combinations exactly.
+def filter_results_by_combinations_old(df, combinations):
 
-    Args:
-        df (pd.DataFrame): DataFrame containing chi-square results.
-        combinations (list of lists): List of IV combinations to match.
-
-    Returns:
-        pd.DataFrame: Filtered DataFrame containing only matching rows.
-    """
     # Initialize a list to collect filtered DataFrames for each combo
     filtered_results = []
 
@@ -131,6 +121,21 @@ def filter_results_by_combinations(df, combinations):
 
     # Concatenate all matching rows into a single DataFrame
     return pd.concat(filtered_results, ignore_index=True)
+
+
+def filter_results_by_combinations_new(df, combinations):
+    filtered_results = []
+
+    # Precompute unique row IV sets
+    df_iv_sets = df[['IV', 'Control_1', 'Control_2']].apply(lambda row: frozenset(row.dropna()), axis=1)
+
+    # Convert combinations to frozensets
+    combo_sets = {frozenset(combo) for combo in combinations}
+
+    # Vectorized filtering: Keep only rows with matching IV sets
+    matching_rows = df[df_iv_sets.isin(combo_sets)]
+
+    return matching_rows
 
 
 # Function to match juror responses with filtered results
