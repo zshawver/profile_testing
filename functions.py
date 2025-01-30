@@ -115,34 +115,6 @@ def filter_results_by_combinations(df, combinations):
 
     return matching_rows
 
-
-# # Function to match juror responses with filtered results
-# def match_jurors(juror_data, filtered_results,name,iv1,iv1_label,iv2,iv2_label,iv3,iv3label,prediction_column):
-#     results = []
-
-#     for _, row in filtered_results.iterrows():
-#         # Extract relevant columns and labels from the current row
-#         iv_col, c1_col, c2_col = row[iv1], row[iv2], row[iv3]
-#         iv_label, c1_label, c2_label = row[iv1_label], row[iv2_label], row[iv3label]
-#         prediction = row[prediction_column]
-
-#         # Create boolean condition to match jurors
-#         condition = (
-#             (juror_data[iv_col] == iv_label) &
-#             (juror_data[c1_col] == c1_label if pd.notna(c1_col) else True) &
-#             (juror_data[c2_col] == c2_label if pd.notna(c2_col) else True)
-#         )
-
-#         # Filter matching jurors
-#         matched_jurors = juror_data[condition]
-#         for _, juror in matched_jurors.iterrows():
-#             results.append({
-#                 'NAME': juror[name],
-#                 'weighted_prediction': prediction
-#             })
-
-#     return pd.DataFrame(results)
-
 def match_jurors(juror_data, filtered_results, name_col, dv_col, batch_name, prediction_column):
     results = []
 
