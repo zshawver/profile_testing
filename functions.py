@@ -156,10 +156,8 @@ def match_jurors(juror_data, filtered_results, name_col, dv_col, batch_name, pre
     for _, row in filtered_results.iterrows():
 
         results_iv_set = row['iv_sets']
-        print(results_iv_set)
 
         results_iv_level_set = row['iv_level_sets']
-        print(results_iv_level_set)
 
         juror_data['juror_iv_level_sets'] = juror_data.apply(lambda juror_row: extract_iv_levels(juror_row, results_iv_set), axis=1)
 
