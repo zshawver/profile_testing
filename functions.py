@@ -172,7 +172,7 @@ def match_jurors(juror_data, filtered_results, name_col, dv_col, batch_name, pre
                 'juror_name': juror[name_col],
                 'dv': juror[dv_col],
                 'batch': batch_name,
-                'n_results': results_in_batch,
+                'n_results_in_batch': results_in_batch,
                 'iv_sets': row['iv_sets'],  # Store the frozen set directly for post-processing
                 'iv_labels': row['iv_label_sets'],
                 'prediction': prediction
