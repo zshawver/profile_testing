@@ -192,3 +192,42 @@ def process_batch_of_IVs(batch,juror_data,juror_id, dv, plf_predictions_df):
                                   'test', \
                                   'prediction')
     return matched_results
+
+def preProcess_juror_data(juror_data_filepath,juror_id,dv,data_sheet_name,use_cols_sheet_name):
+
+    #Read in juror data file
+    juror_data = pd.read_excel(juror_data_filepath,sheet_name=data_sheet_name)
+
+    #Create a df of variables to use
+    use_cols_df = pd.read_excel(juror_data_filepath, sheet_name=use_cols_sheet_name)
+
+    #Create list of IVs for combinations
+    ivs = [var for var in use_cols_df['use_cols']]
+
+    #Identify variables to drop from juror dataset
+    drop_cols = [col for col in juror_data.columns if col not in ivs and col != dv and col != juror_id]
+
+    #Drop unused columns from juror data sheet
+    juror_data = juror_data.drop(columns = drop_cols)
+
+    return juror_data, ivs
+
+def preProcess_results_file(chisq_results_filepath,ivs):
+
+
+    #Read in chi-square results file
+    chi_square_results = pd.read_excel(chisq_results_filepath)
+
+    #Filter out results with an not in ivs list
+    chi_square_results = chi_square_results[chi_square_results[['iv1', 'iv2', 'iv3']].apply(lambda row: row_in_ivs(row, ivs), axis=1)]
+
+
+    #Create a df of plaintiff predictions from chi square results
+    chi_square_results = create_weights(chi_square_results, .39, n_influence = 1.5)
+
+    #Create columns that combine IV names, IV levels (i.e., values) and IV labels
+    chi_square_results["iv_sets"] = chi_square_results[['iv1', 'iv2', 'iv3']].apply(lambda row: frozenset(row.dropna()), axis=1)
+    chi_square_results["iv_level_sets"] = chi_square_results[['iv1_level', 'iv2_level', 'iv3_level']].apply(lambda row: frozenset(row.dropna()), axis=1)
+    chi_square_results["iv_label_sets"] = chi_square_results[['iv1_label', 'iv2_label', 'iv3_label']].apply(lambda row: frozenset(row.dropna()), axis=1)
+
+    return chi_square_results

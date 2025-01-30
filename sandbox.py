@@ -40,11 +40,8 @@
 # })
 
 
-import pandas as pd
 from itertools import combinations
-# import numpy as np
-# from multiprocessing import Pool
-from functions import row_in_ivs, create_weights, filter_results_by_combinations, match_jurors, generate_combinations, process_batch_of_IVs
+from functions import preProcess_juror_data, preProcess_results_file, process_batch_of_IVs
 import os
 
 
@@ -55,38 +52,16 @@ juror_data_fn = "FL_Opioids_JurorData.xlsx"
 chisq_results_fn = "2025-01-29_11-02_FLOpioids_ProfileTesting_ResultsForProfileTesting.xlsx"
 juror_data_filepath = os.path.join(data_folder, juror_data_fn)
 chisq_results_filepath = os.path.join(data_folder, chisq_results_fn)
-sheet_name = "use-values"
+data_sheet_name = "use-values" #Use data sheet with values, not labels
+use_cols_sheet_name = "use cols"
 dv = "DV_1PL_0Def" #DV variable
 juror_id = "NAME" #Juror id variable
 
-#Read in juror data file
-juror_data_FL = pd.read_excel(juror_data_filepath,sheet_name=sheet_name)
-
-#Create a df of variables to use
-use_cols_df = pd.read_excel(juror_data_filepath, sheet_name="use cols")
-
-#Create list of IVs for combinations
-ivs = [var for var in use_cols_df['use_cols']]
-
-#Identify variables to drop from juror dataset
-drop_cols = [col for col in juror_data_FL.columns if col not in ivs and col != dv and col != juror_id]
-
-juror_data_FL = juror_data_FL.drop(columns = drop_cols)
 
 
-#Read in chi-square results file
-chi_square_results_FL = pd.read_excel(chisq_results_filepath)
+juror_data_FL, ivs = preProcess_juror_data(juror_data_filepath,juror_id,dv,data_sheet_name,use_cols_sheet_name)
 
-#Filter out results with an not in ivs list
-chi_square_results_FL = chi_square_results_FL[chi_square_results_FL[['iv1', 'iv2', 'iv3']].apply(lambda row: row_in_ivs(row, ivs), axis=1)]
-
-
-#Create a df of plaintiff predictions from chi square results
-plf_predictions_df = create_weights(chi_square_results_FL, .39, n_influence = 1.5)
-# Precompute unique row IV sets
-plf_predictions_df["iv_sets"] = plf_predictions_df[['iv1', 'iv2', 'iv3']].apply(lambda row: frozenset(row.dropna()), axis=1)
-plf_predictions_df["iv_level_sets"] = plf_predictions_df[['iv1_level', 'iv2_level', 'iv3_level']].apply(lambda row: frozenset(row.dropna()), axis=1)
-plf_predictions_df["iv_label_sets"] = plf_predictions_df[['iv1_label', 'iv2_label', 'iv3_label']].apply(lambda row: frozenset(row.dropna()), axis=1)
+chi_square_results = preProcess_results_file(chisq_results_filepath, ivs)
 
 #Create batches of combinations of 5 IVs
 five_iv_combos = combinations(ivs, 5)
