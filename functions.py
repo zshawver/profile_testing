@@ -151,7 +151,7 @@ def match_jurors(juror_data, filtered_results, name_col, dv_col, batch_name, pre
         return frozenset(row[iv] for iv in iv_sets if pd.notna(row[iv]))
 
 
-
+    results_in_batch = filtered_results.shape[0]
     # Step 2: Loop over filtered results
     for _, row in filtered_results.iterrows():
 
@@ -172,10 +172,9 @@ def match_jurors(juror_data, filtered_results, name_col, dv_col, batch_name, pre
                 'juror_name': juror[name_col],
                 'dv': juror[dv_col],
                 'batch': batch_name,
+                'n_results': results_in_batch,
                 'iv_sets': row['iv_sets'],  # Store the frozen set directly for post-processing
-                'iv1_level': row['iv1_level'],
-                'iv2_level': row['iv2_level'],
-                'iv3_level': row['iv3_level'],
+                'iv_labels': row['iv_label_sets'],
                 'prediction': prediction
             }
             for _, juror in matching_jurors.iterrows()
