@@ -44,13 +44,10 @@ import pandas as pd
 from itertools import combinations
 # import numpy as np
 # from multiprocessing import Pool
-from functions import create_weights, filter_results_by_combinations, match_jurors, generate_combinations
+from functions import row_in_ivs, create_weights, filter_results_by_combinations, match_jurors, generate_combinations
 import os
 
-# Function to check if all non-NaN IVs in the row are in the list
-def row_in_ivs(row, ivs):
-    row = row.dropna()  # Remove NaN values
-    return all(iv in ivs for iv in row)
+
 
 #Information about juror data file
 data_folder = "C:/Users/zshawver/OneDrive - Dubin Consulting/Profile Testing/Data"
@@ -77,10 +74,6 @@ drop_cols = [col for col in juror_data_FL.columns if col not in ivs and col != d
 juror_data_FL = juror_data_FL.drop(columns = drop_cols)
 
 
-
-
-
-
 #Read in chi-square results file
 chi_square_results_FL = pd.read_excel(chisq_results_filepath)
 
@@ -92,7 +85,7 @@ chi_square_results_FL = chi_square_results_FL[chi_square_results_FL[['iv1', 'iv2
 plf_predictions_df = create_weights(chi_square_results_FL, .39, n_influence = 1.5)
 # Precompute unique row IV sets
 plf_predictions_df["iv_sets"] = plf_predictions_df[['iv1', 'iv2', 'iv3']].apply(lambda row: frozenset(row.dropna()), axis=1)
-
+plf_predictions_df["iv_level_sets"] = plf_predictions_df[['iv1_level', 'iv2_level', 'iv3_level']].apply(lambda row: frozenset(row.dropna()), axis=1)
 
 #Create batches of combinations of 5 IVs
 five_iv_combos = combinations(ivs, 5)
@@ -156,44 +149,52 @@ batch = next(small_iv_combos)
 # print(f"Serial Execution Time: {end_time - start_time:.2f} seconds")
 
 
-def filter_results_by_combinations_new(df, combinations):
-    # Convert combinations to frozensets
-    combo_sets = {frozenset(combo) for combo in combinations}
 
-    # Vectorized filtering: Keep only rows with matching IV sets
-    # matching_rows = df[df['iv_sets'].isin(combo_sets)]
-    matching_rows = df[df['iv_sets'].apply(lambda x: x in combo_sets)]
-
-    return matching_rows
 
 
 
 # start_time = time.time()
 import timeit
-def combo_and_filter(batch,plf_predictions_df):
-    combos = generate_combinations(batch)
-    filtered_results = filter_results_by_combinations(plf_predictions_df, combos)
 
 def combo_and_filter_new(batch,plf_predictions_df):
     combos = generate_combinations(batch)
-    filtered_results = filter_results_by_combinations_new(plf_predictions_df, combos)
+    filtered_results = filter_results_by_combinations(plf_predictions_df, combos)
     return filtered_results
 
 
 batch = ('Age_30Split', 'SAT_INFLUENCE_OF_BUS_1_COLLAPSED', 'LC__PROFIT_COMPARE_3', 'COLLAR', 'ASSOCIATION')
 combos = generate_combinations(batch)
-filtered_results = filter_results_by_combinations_new(plf_predictions_df, combos)
+filtered_results = filter_results_by_combinations(plf_predictions_df, combos)
 # filtered_results = combo_and_filter_new(batch,plf_predictions_df)
 
-other_filtered_results = combo_and_filter_new(batch,plf_predictions_df)
 
 
-# for combo in combos:
-#     print(combo)
 
-execution_time = timeit.timeit('combo_and_filter_new(batch,plf_predictions_df)', globals=globals(), number=2000)
 
-print(f"Average Execution Time: {execution_time / 2000:.10f} seconds")
+
+
+
+
+matched_jurors = match_jurors(juror_data_FL, \
+                              filtered_results, \
+                              juror_id, \
+                              dv, \
+                              'test', \
+                              'prediction')
+
+
+
+
+
+
+execution_time = timeit.timeit('matched_jurors(juror_data_FL, \
+                              filtered_results, \
+                              juror_id, \
+                              dv, \
+                              "test", \
+                              "prediction")', globals=globals(), number=5000)
+
+print(f"Average Execution Time: {execution_time / 5000:.10f} seconds")
 
 
 # end_time = time.time()

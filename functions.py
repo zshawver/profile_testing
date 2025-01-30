@@ -95,72 +95,92 @@ def create_nested_tuples(row):
     return tuple(nested_tuples)
 
 
+# Function to check if all non-NaN IVs in the row are in the list
+def row_in_ivs(row, ivs):
+    row = row.dropna()  # Remove NaN values
+    return all(iv in ivs for iv in row)
+
 # Generate all combinations for 1-IV, 2-IV, and 3-IV tests
 def generate_combinations(batch, max_comb=3):
     for r in range(1, max_comb + 1):
         yield from combinations(batch, r)  # Yielding instead of storing
 
 
-# Function to filter results by combinations
-def filter_results_by_combinations_old(df, combinations):
-
-    # Initialize a list to collect filtered DataFrames for each combo
-    filtered_results = []
-
-    for combo in combinations:
-        combo_set = set(combo)  # Convert combo to a set
-
-        # Filter rows where the IVs match the combo exactly
-        matching_rows = df[
-            df[['IV', 'Control_1', 'Control_2']].apply(
-                lambda row: set(row.dropna()) == combo_set, axis=1
-            )
-        ]
-
-        filtered_results.append(matching_rows)  # Add the matching rows
-
-    # Concatenate all matching rows into a single DataFrame
-    return pd.concat(filtered_results, ignore_index=True)
-
-
-def filter_results_by_combinations_new(df, combinations):
-    filtered_results = []
-
-    # Precompute unique row IV sets
-    df_iv_sets = df[['IV', 'Control_1', 'Control_2']].apply(lambda row: frozenset(row.dropna()), axis=1)
-
+def filter_results_by_combinations(df, combinations):
     # Convert combinations to frozensets
     combo_sets = {frozenset(combo) for combo in combinations}
 
     # Vectorized filtering: Keep only rows with matching IV sets
-    matching_rows = df[df_iv_sets.isin(combo_sets)]
+    matching_rows = df[df['iv_sets'].apply(lambda x: x in combo_sets)]
 
     return matching_rows
 
 
-# Function to match juror responses with filtered results
-def match_jurors(juror_data, filtered_results,name,iv1,iv1_label,iv2,iv2_label,iv3,iv3label,prediction_column):
+# # Function to match juror responses with filtered results
+# def match_jurors(juror_data, filtered_results,name,iv1,iv1_label,iv2,iv2_label,iv3,iv3label,prediction_column):
+#     results = []
+
+#     for _, row in filtered_results.iterrows():
+#         # Extract relevant columns and labels from the current row
+#         iv_col, c1_col, c2_col = row[iv1], row[iv2], row[iv3]
+#         iv_label, c1_label, c2_label = row[iv1_label], row[iv2_label], row[iv3label]
+#         prediction = row[prediction_column]
+
+#         # Create boolean condition to match jurors
+#         condition = (
+#             (juror_data[iv_col] == iv_label) &
+#             (juror_data[c1_col] == c1_label if pd.notna(c1_col) else True) &
+#             (juror_data[c2_col] == c2_label if pd.notna(c2_col) else True)
+#         )
+
+#         # Filter matching jurors
+#         matched_jurors = juror_data[condition]
+#         for _, juror in matched_jurors.iterrows():
+#             results.append({
+#                 'NAME': juror[name],
+#                 'weighted_prediction': prediction
+#             })
+
+#     return pd.DataFrame(results)
+
+def match_jurors(juror_data, filtered_results, name_col, dv_col, batch_name, prediction_column):
     results = []
 
+    # Step 1: Create frozensets of IV levels per juror
+    def extract_iv_levels(row, iv_sets):
+        return frozenset(row[iv] for iv in iv_sets if pd.notna(row[iv]))
+
+
+
+    # Step 2: Loop over filtered results
     for _, row in filtered_results.iterrows():
-        # Extract relevant columns and labels from the current row
-        iv_col, c1_col, c2_col = row[iv1], row[iv2], row[iv3]
-        iv_label, c1_label, c2_label = row[iv1_label], row[iv2_label], row[iv3label]
+
+        results_iv_set = row['iv_sets']
+        print(results_iv_set)
+
+        results_iv_level_set = row['iv_level_sets']
+        print(results_iv_level_set)
+
+        juror_data['juror_iv_level_sets'] = juror_data.apply(lambda juror_row: extract_iv_levels(juror_row, results_iv_set), axis=1)
+
         prediction = row[prediction_column]
 
-        # Create boolean condition to match jurors
-        condition = (
-            (juror_data[iv_col] == iv_label) &
-            (juror_data[c1_col] == c1_label if pd.notna(c1_col) else True) &
-            (juror_data[c2_col] == c2_label if pd.notna(c2_col) else True)
-        )
+        # Step 3: Efficient filtering using .apply()
+        matching_jurors = juror_data[juror_data['juror_iv_level_sets'].apply(lambda x: x == results_iv_level_set)]
 
-        # Filter matching jurors
-        matched_jurors = juror_data[condition]
-        for _, juror in matched_jurors.iterrows():
-            results.append({
-                'NAME': juror['NAME'],
-                'weighted_prediction': prediction
-            })
+        # Step 4: Store results efficiently
+        results.extend([
+            {
+                'juror_name': juror[name_col],
+                'dv': juror[dv_col],
+                'batch': batch_name,
+                'iv_sets': row['iv_sets'],  # Store the frozen set directly for post-processing
+                'iv1_level': row['iv1_level'],
+                'iv2_level': row['iv2_level'],
+                'iv3_level': row['iv3_level'],
+                'prediction': prediction
+            }
+            for _, juror in matching_jurors.iterrows()
+        ])
 
-    return pd.DataFrame(results)
+    return results  # Return a list of dictionaries for flexibility
