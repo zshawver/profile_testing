@@ -44,7 +44,7 @@ import pandas as pd
 from itertools import combinations
 # import numpy as np
 # from multiprocessing import Pool
-from functions import row_in_ivs, create_weights, filter_results_by_combinations, match_jurors, generate_combinations
+from functions import row_in_ivs, create_weights, filter_results_by_combinations, match_jurors, generate_combinations, process_batch_of_IVs
 import os
 
 
@@ -86,6 +86,7 @@ plf_predictions_df = create_weights(chi_square_results_FL, .39, n_influence = 1.
 # Precompute unique row IV sets
 plf_predictions_df["iv_sets"] = plf_predictions_df[['iv1', 'iv2', 'iv3']].apply(lambda row: frozenset(row.dropna()), axis=1)
 plf_predictions_df["iv_level_sets"] = plf_predictions_df[['iv1_level', 'iv2_level', 'iv3_level']].apply(lambda row: frozenset(row.dropna()), axis=1)
+plf_predictions_df["iv_label_sets"] = plf_predictions_df[['iv1_label', 'iv2_label', 'iv3_label']].apply(lambda row: frozenset(row.dropna()), axis=1)
 
 #Create batches of combinations of 5 IVs
 five_iv_combos = combinations(ivs, 5)
@@ -156,43 +157,25 @@ batch = next(small_iv_combos)
 # start_time = time.time()
 import timeit
 
-def combo_and_filter_new(batch,plf_predictions_df):
-    combos = generate_combinations(batch)
-    filtered_results = filter_results_by_combinations(plf_predictions_df, combos)
-    return filtered_results
+
+
+
 
 
 batch = ('Age_30Split', 'SAT_INFLUENCE_OF_BUS_1_COLLAPSED', 'LC__PROFIT_COMPARE_3', 'COLLAR', 'ASSOCIATION')
-combos = generate_combinations(batch)
-filtered_results = filter_results_by_combinations(plf_predictions_df, combos)
+# combos = generate_combinations(batch)
+# filtered_results = filter_results_by_combinations(plf_predictions_df, combos)
 # filtered_results = combo_and_filter_new(batch,plf_predictions_df)
+# matched_jurors = match_jurors(juror_data_FL, \
+#                               filtered_results, \
+#                               juror_id, \
+#                               dv, \
+#                               'test', \
+#                               'prediction')
 
+matched_results = process_batch_of_IVs(batch,plf_predictions_df)
 
-
-
-
-
-
-
-
-matched_jurors = match_jurors(juror_data_FL, \
-                              filtered_results, \
-                              juror_id, \
-                              dv, \
-                              'test', \
-                              'prediction')
-
-
-
-
-
-
-execution_time = timeit.timeit('matched_jurors(juror_data_FL, \
-                              filtered_results, \
-                              juror_id, \
-                              dv, \
-                              "test", \
-                              "prediction")', globals=globals(), number=5000)
+execution_time = timeit.timeit('process_batch_of_IVs(batch,plf_predictions_df)', globals=globals(), number=5000)
 
 print(f"Average Execution Time: {execution_time / 5000:.10f} seconds")
 
