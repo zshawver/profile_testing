@@ -59,7 +59,7 @@ juror_id = "NAME" #Juror id variable
 
 
 
-juror_data_FL, ivs = preProcess_juror_data(juror_data_filepath,juror_id,dv,data_sheet_name,use_cols_sheet_name)
+juror_data, ivs = preProcess_juror_data(juror_data_filepath,juror_id,dv,data_sheet_name,use_cols_sheet_name)
 
 chi_square_results = preProcess_results_file(chisq_results_filepath, ivs)
 
@@ -148,7 +148,8 @@ batch = ('Age_30Split', 'SAT_INFLUENCE_OF_BUS_1_COLLAPSED', 'LC__PROFIT_COMPARE_
 #                               'test', \
 #                               'prediction')
 
-matched_results = process_batch_of_IVs(batch,plf_predictions_df)
+
+matched_results = process_batch_of_IVs(batch,juror_data,juror_id, dv,chi_square_results)
 
 execution_time = timeit.timeit('process_batch_of_IVs(batch,plf_predictions_df)', globals=globals(), number=5000)
 

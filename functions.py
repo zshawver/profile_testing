@@ -182,9 +182,9 @@ def match_jurors(juror_data, filtered_results, name_col, dv_col, batch_name, pre
 
     return results  # Return a list of dictionaries for flexibility
 
-def process_batch_of_IVs(batch,juror_data,juror_id, dv, plf_predictions_df):
+def process_batch_of_IVs(batch,juror_data,juror_id, dv, chi_square_results):
     combos = generate_combinations(batch)
-    filtered_results = filter_results_by_combinations(plf_predictions_df, combos)
+    filtered_results = filter_results_by_combinations(chi_square_results, combos)
     matched_results = match_jurors(juror_data, \
                                   filtered_results, \
                                   juror_id, \
