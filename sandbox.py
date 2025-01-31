@@ -43,7 +43,9 @@
 from itertools import combinations
 from functions import preProcess_juror_data, preProcess_results_file, process_batch_of_IVs
 import os
-
+from multiprocessing import Pool
+import time
+import pandas as pd
 
 
 #Information about juror data file
@@ -53,7 +55,7 @@ chisq_results_fn = "2025-01-29_11-02_FLOpioids_ProfileTesting_ResultsForProfileT
 juror_data_filepath = os.path.join(data_folder, juror_data_fn)
 chisq_results_filepath = os.path.join(data_folder, chisq_results_fn)
 data_sheet_name = "use-values" #Use data sheet with values, not labels
-use_cols_sheet_name = "use cols"
+use_cols_sheet_name = "use cols_test"
 dv = "DV_1PL_0Def" #DV variable
 juror_id = "NAME" #Juror id variable
 
@@ -63,45 +65,84 @@ juror_data, ivs = preProcess_juror_data(juror_data_filepath,juror_id,dv,data_she
 
 chi_square_results = preProcess_results_file(chisq_results_filepath, ivs)
 
-#Create batches of combinations of 5 IVs
-five_iv_combos = combinations(ivs, 5)
 
-# combination = next(five_iv_combos)
-# combinations = generate_combinations(combination)
-# filtered_results = filter_results_by_combinations(plf_predictions_df, combinations)
-# matched_results = match_jurors(juror_data_FL, \
-#                                filtered_results,\
-#                                juror_id, \
-#                                'IV','IV_Label', \
-#                                'control_1','Control_1', \
-#                                'control_2','Control_2', \
-#                                'prediction')
+# batch = ('Age_30Split', 'SAT_INFLUENCE_OF_BUS_1_COLLAPSED', 'LC__PROFIT_COMPARE_3', 'COLLAR', 'ASSOCIATION')
+# matched_results = process_batch_of_IVs(batch,juror_data,juror_id, dv,chi_square_results)
 
+
+
+#THIS IS THE DUMB WAY:
+# five_iv_combos = combinations(ivs, 5)
+# all_results = {}
 # for batch in five_iv_combos:
-#     combinations = generate_combinations(batch)
-#     filtered_results = filter_results_by_combinations(plf_predictions_df, combinations)
-#     matched_results = match_jurors(juror_data_FL, filtered_results)
+#     matched_results = process_batch_of_IVs(batch,juror_data,juror_id, dv,chi_square_results)
+#     all_results.append(matched_results)
 
 
 
-# print(matched_results)
+# Function to iterate over IV combinations in chunks
+def iter_combinations_in_chunks(ivs, chunk_size):
+    """Yields chunks of IV combinations without converting to list."""
+    batch = []
+    for combo in combinations(ivs, 5):  # 5-IV batches
+        batch.append(combo)
+        if len(batch) == chunk_size:
+            yield batch
+            batch = []
+    if batch:  # Yield remaining batch if not empty
+        yield batch
 
-# for _,row in matched_results.iterrows():
-#     print(row['NAME'],row['weighted_prediction'])
+# Parallel processing function
+def parallel_process(ivs, juror_data, juror_id, dv, chi_square_results, output_file, num_workers=20, chunk_size=100):
+    """Parallel execution with lazy chunking and CSV writing."""
+    start_time = time.time()
 
-# for _,row in juror_data_FL.iterrows():
-#     if row['NAME'] in matched_results['NAME'].values:
-#         match_index = matched_results[matched_results['NAME'] == row['NAME']].index[0]
-#         # Pull a value from another column using that index
-#         prediction = matched_results.loc[match_index, 'weighted_prediction']
-#         outcome = row['DV_1PL_0Def']
-#         print(f"{row['NAME']}, predicted {prediction:.0%} PL was {outcome}")
+    with Pool(processes=num_workers) as pool:
+        for i, batch_results in enumerate(pool.imap_unordered(
+            lambda batch: process_batch_of_IVs(batch, juror_data, juror_id, dv, chi_square_results),
+            iter_combinations_in_chunks(ivs, chunk_size)
+        )):
+            # Convert to DataFrame and write to CSV
+            pd.DataFrame(batch_results).to_csv(output_file, mode='a', header=(i == 0), index=False)
+
+            # Debugging progress every 100 chunks
+            if (i + 1) % 100 == 0:
+                elapsed = time.time() - start_time
+                print(f"[{i+1} chunks processed] - Elapsed time: {elapsed:.2f} sec")
+
+    print(f"✅ Processing complete! Total time: {time.time() - start_time:.2f} sec")
 
 
-ivs_small = ivs[:7]
+output_file = "juror_predictions.csv"
 
-small_iv_combos = combinations(ivs_small, 5)
-batch = next(small_iv_combos)
+parallel_process(ivs, juror_data, juror_id, dv, chi_square_results, output_file, num_workers=20, chunk_size=100)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ivs_small = ivs[:7]
+# small_iv_combos = combinations(ivs_small, 5)
 
 
 
@@ -130,30 +171,18 @@ batch = next(small_iv_combos)
 
 
 # start_time = time.time()
-import timeit
+# import timeit
 
 
 
 
 
 
-batch = ('Age_30Split', 'SAT_INFLUENCE_OF_BUS_1_COLLAPSED', 'LC__PROFIT_COMPARE_3', 'COLLAR', 'ASSOCIATION')
-# combos = generate_combinations(batch)
-# filtered_results = filter_results_by_combinations(plf_predictions_df, combos)
-# filtered_results = combo_and_filter_new(batch,plf_predictions_df)
-# matched_jurors = match_jurors(juror_data_FL, \
-#                               filtered_results, \
-#                               juror_id, \
-#                               dv, \
-#                               'test', \
-#                               'prediction')
 
 
-matched_results = process_batch_of_IVs(batch,juror_data,juror_id, dv,chi_square_results)
+# execution_time = timeit.timeit('process_batch_of_IVs(batch,plf_predictions_df)', globals=globals(), number=5000)
 
-execution_time = timeit.timeit('process_batch_of_IVs(batch,plf_predictions_df)', globals=globals(), number=5000)
-
-print(f"Average Execution Time: {execution_time / 5000:.10f} seconds")
+# print(f"Average Execution Time: {execution_time / 5000:.10f} seconds")
 
 
 # end_time = time.time()
