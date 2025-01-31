@@ -101,21 +101,21 @@ def row_in_ivs(row, ivs):
     return all(iv in ivs for iv in row)
 
 # Generate all combinations for 1-IV, 2-IV, and 3-IV tests
-def generate_combinations(batch, max_comb=3):
+def generate_combinations(five_iv_tuple: tuple, max_comb=3):
     for r in range(1, max_comb + 1):
-        yield from combinations(batch, r)  # Yielding instead of storing
+        yield from combinations(five_iv_tuple, r)  # Yielding instead of storing
 
 
-def filter_results_by_combinations(df, combinations):
+def filter_results_by_combinations(df, combos):
     # Convert combinations to frozensets
-    combo_sets = {frozenset(combo) for combo in combinations}
+    combo_sets = {frozenset(combo) for combo in combos}
 
     # Vectorized filtering: Keep only rows with matching IV sets
     matching_rows = df[df['iv_sets'].apply(lambda x: x in combo_sets)]
 
     return matching_rows
 
-def match_jurors(juror_data, filtered_results, name_col, dv_col, batch_name, prediction_column):
+def match_jurors(juror_data, filtered_results, name_col, dv_col, prediction_column):
     results = []
 
     # Step 1: Create frozensets of IV levels per juror
@@ -123,7 +123,7 @@ def match_jurors(juror_data, filtered_results, name_col, dv_col, batch_name, pre
         return frozenset(row[iv] for iv in iv_sets if pd.notna(row[iv]))
 
 
-    results_in_batch = filtered_results.shape[0]
+    results_in_five_iv_tuple = filtered_results.shape[0]
     # Step 2: Loop over filtered results
     for _, row in filtered_results.iterrows():
 
@@ -143,8 +143,7 @@ def match_jurors(juror_data, filtered_results, name_col, dv_col, batch_name, pre
             {
                 'juror_name': juror[name_col],
                 'dv': juror[dv_col],
-                'batch': batch_name,
-                'n_results_in_batch': results_in_batch,
+                'n_results': results_in_five_iv_tuple,
                 'iv_sets': row['iv_sets'],  # Store the frozen set directly for post-processing
                 'iv_labels': row['iv_label_sets'],
                 'prediction': prediction
@@ -154,8 +153,8 @@ def match_jurors(juror_data, filtered_results, name_col, dv_col, batch_name, pre
 
     return results  # Return a list of dictionaries for flexibility
 
-def process_batch_of_IVs(batch,juror_data,juror_id, dv, chi_square_results):
-    combos = generate_combinations(batch)
+def process_five_IV_tuple(five_iv_tuple: tuple,juror_data,juror_id, dv, chi_square_results):
+    combos = generate_combinations(five_iv_tuple)
     filtered_results = filter_results_by_combinations(chi_square_results, combos)
     matched_results = match_jurors(juror_data, \
                                   filtered_results, \
