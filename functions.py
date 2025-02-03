@@ -160,7 +160,6 @@ def process_five_IV_tuple(five_iv_tuple: tuple,juror_data,juror_id, dv, chi_squa
                                   filtered_results, \
                                   juror_id, \
                                   dv, \
-                                  'test', \
                                   'prediction')
     return matched_results
 
