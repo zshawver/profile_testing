@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 import re
 
-import sqlite3
+
 
 
 
@@ -175,34 +175,6 @@ if __name__ == "__main__":
 '''
 
 
-results_summary = pd.read_csv(os.path.join('Output',"2025-02-12_10-52_combinations_summary.csv"))
+# results_summary = pd.read_csv(os.path.join('Output',"2025-02-12_10-52_combinations_summary.csv"))
 
-results_df = pd.read_csv(os.path.join('Output',"2025-02-12_10-25_final_results.csv"))
-
-
-
-
-
-
-# File paths
-summary_path = "Output/2025-02-12_10-25_final_results.csv"  # Adjust as needed
-results_path = "Output/2025-02-12_10-52_combinations_summary.csv"
-db_path = "Output/results_db.sqlite"
-
-# Remove the database if it already exists (optional)
-if os.path.exists(db_path):
-    os.remove(db_path)
-
-# Connect to SQLite
-conn = sqlite3.connect(db_path)
-
-# Read CSV in chunks (to avoid memory overload)
-chunk_size = 500000  # Adjust as needed
-for chunk in pd.read_csv(results_path, chunksize=chunk_size):
-    chunk.to_sql("full_results", conn, if_exists="append", index=False)
-    print(f"Inserted {len(chunk)} rows...")
-
-# Close connection
-conn.close()
-
-print("CSV successfully imported into SQLite 🎉")
+# results_df = pd.read_csv(os.path.join('Output',"2025-02-12_10-25_final_results.csv"))
