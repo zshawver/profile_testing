@@ -153,15 +153,89 @@ def match_jurors(juror_data, filtered_results, name_col, dv_col, prediction_colu
 
     return results  # Return a list of dictionaries for flexibility
 
-def process_five_IV_tuple(five_iv_tuple: tuple,juror_data,juror_id, dv, chi_square_results):
-    combos = generate_combinations(five_iv_tuple)
-    filtered_results = filter_results_by_combinations(chi_square_results, combos)
-    matched_results = match_jurors(juror_data, \
-                                  filtered_results, \
-                                  juror_id, \
-                                  dv, \
-                                  'prediction')
-    return matched_results
+
+def match_jurors(filtered_results):
+    juror_predictions = {}
+
+    for _, row in filtered_results.iterrows():
+        juror = row['juror']
+        dv = row['dv']
+        prediction = row['predicted_prob']
+
+        if juror not in juror_predictions:
+            juror_predictions[juror] = {"dv": dv, "predictions": []}
+
+        juror_predictions[juror]["predictions"].append(prediction)
+
+    return juror_predictions
+
+def compute_summary_statistics(juror_predictions, iv_set):
+    summary = {
+        "iv_set": iv_set,
+        "hits_median": 0, "false_alarms_median": 0, "misses_median": 0, "correct_rejections_median": 0,
+        "hits_tmv": 0, "false_alarms_tmv": 0, "misses_tmv": 0, "correct_rejections_tmv": 0,
+        "pl_count": 0, "def_count": 0,
+        "wild_card_median": 0, "wild_card_tmv": 0,
+    }
+
+    for juror, data in juror_predictions.items():
+        dv = data["dv"]
+        predictions = data["predictions"]
+
+        median_pred = np.median(predictions)
+        tmv_pred = 1 if sum(p >= 0.5 for p in predictions) > len(predictions) / 2 else 0 if sum(p < 0.5 for p in predictions) > len(predictions) / 2 else None
+
+        if median_pred >= 0.5:
+            summary["pl_count"] += 1
+        else:
+            summary["def_count"] += 1
+
+        if 0.45 <= median_pred <= 0.55:
+            summary["wild_card_median"] += 1
+        else:
+            if median_pred >= 0.5 and dv == 1:
+                summary["hits_median"] += 1
+            elif median_pred >= 0.5 and dv == 0:
+                summary["false_alarms_median"] += 1
+            elif median_pred < 0.5 and dv == 1:
+                summary["misses_median"] += 1
+            elif median_pred < 0.5 and dv == 0:
+                summary["correct_rejections_median"] += 1
+
+        if tmv_pred is None:
+            summary["wild_card_tmv"] += 1
+        else:
+            if tmv_pred >= 0.5 and dv == 1:
+                summary["hits_tmv"] += 1
+            elif tmv_pred >= 0.5 and dv == 0:
+                summary["false_alarms_tmv"] += 1
+            elif tmv_pred < 0.5 and dv == 1:
+                summary["misses_tmv"] += 1
+            elif tmv_pred < 0.5 and dv == 0:
+                summary["correct_rejections_tmv"] += 1
+
+    summary["accuracy_median"] = (summary["hits_median"] + summary["correct_rejections_median"]) / max(1, (summary["hits_median"] + summary["correct_rejections_median"] + summary["false_alarms_median"] + summary["misses_median"]))
+    summary["precision_median"] = summary["hits_median"] / max(1, (summary["hits_median"] + summary["false_alarms_median"]))
+    summary["recall_median"] = summary["hits_median"] / max(1, (summary["hits_median"] + summary["misses_median"]))
+
+    summary["accuracy_tmv"] = (summary["hits_tmv"] + summary["correct_rejections_tmv"]) / max(1, (summary["hits_tmv"] + summary["correct_rejections_tmv"] + summary["false_alarms_tmv"] + summary["misses_tmv"]))
+    summary["precision_tmv"] = summary["hits_tmv"] / max(1, (summary["hits_tmv"] + summary["false_alarms_tmv"]))
+    summary["recall_tmv"] = summary["hits_tmv"] / max(1, (summary["hits_tmv"] + summary["misses_tmv"]))
+
+    return summary
+
+
+
+
+# def process_five_IV_tuple(five_iv_tuple: tuple,juror_data,juror_id, dv, chi_square_results):
+#     combos = generate_combinations(five_iv_tuple)
+#     filtered_results = filter_results_by_combinations(chi_square_results, combos)
+#     matched_results = match_jurors(juror_data, \
+#                                   filtered_results, \
+#                                   juror_id, \
+#                                   dv, \
+#                                   'prediction')
+#     return matched_results
 
 def preProcess_juror_data(juror_data_filepath,juror_id,dv,data_sheet_name,use_cols_sheet_name):
 
