@@ -9,6 +9,7 @@ import os
 import logging
 from datetime import datetime
 import re
+import math
 
 
 
@@ -151,9 +152,8 @@ def merge_summary(output_dir):
 
 
 
-'''
 
-final usable script
+# FINAL USABLE SCRIPT
 
 if __name__ == "__main__":
     data_folder = "C:/Users/zshawver/OneDrive - Dubin Consulting/Profile Testing/Data"
@@ -172,9 +172,53 @@ if __name__ == "__main__":
 
     freeze_support()
     parallel_process(ivs, juror_data, juror_id, dv, chi_square_results, output_dir, num_workers=16, chunk_size=10000)
-'''
+
 
 
 # results_summary = pd.read_csv(os.path.join('Output',"2025-02-12_10-52_combinations_summary.csv"))
 
 # results_df = pd.read_csv(os.path.join('Output',"2025-02-12_10-25_final_results.csv"))
+
+
+batch_df = pd.read_excel("Output/MatchedJurors_Most_Results.xlsx",sheet_name="Sheet1")
+
+
+# batch_df['median_prediction'] = batch_df.groupby('matched_juror')['prediction'].transform('median')
+
+median_predictions = batch_df.groupby('matched_juror', as_index=False).agg(
+    median_prediction=('prediction', 'median'),
+    DV=('DV', 'first')
+)
+
+median_predictions['correctness'] = median_predictions.apply(
+    lambda row: "correct" if (row['DV'] == 1 and row['median_prediction'] >= 0.5) or
+                                (row['DV'] == 0 and row['median_prediction'] < 0.5)
+                else "incorrect",
+    axis=1
+)
+
+proportions = median_predictions['correctness'].value_counts(normalize=True)
+correct_prop = proportions.get("correct", 0) * 100  # Convert to percentage
+print(f"This batch correctly predicted {correct_prop:.1f}% of jurors")
+
+
+correctness_by_dv = median_predictions.groupby("DV")["correctness"].value_counts(normalize=True).unstack()
+
+# Extract proportions
+correct_0 = correctness_by_dv.loc[0, "correct"] * 100 if "correct" in correctness_by_dv.columns else 0
+correct_1 = correctness_by_dv.loc[1, "correct"] * 100 if "correct" in correctness_by_dv.columns else 0
+
+# Print results
+print(f"This batch correctly predicted {correct_1:.1f}% of Plaintiff jurors")
+print(f"This batch correctly predicted {correct_0:.1f}% of Defense jurors")
+
+
+num_predictions_below_0_5 = (median_predictions["median_prediction"] < 0.5).sum()
+
+pct_predictions_below_0_5 = num_predictions_below_0_5 / median_predictions.shape[0]
+
+print(f"{num_predictions_below_0_5} predictions below 0.5: {pct_predictions_below_0_5 * 100: .1f}% of all jurors")
+
+
+
+# median_predictions.rename(columns={'prediction': 'median_prediction'}, inplace=True)
